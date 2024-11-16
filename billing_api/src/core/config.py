@@ -9,9 +9,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     project_name: str = Field("billing_api", alias="PROJECT_NAME")
-    postgres_url: str = Field(
-        "postgresql+asyncpg://postgres:postgres@db:5432/foo", alias="POSTGRES_URL"
-    )
+    postgres_url: str = Field("postgresql+asyncpg://postgres:postgres@db:5432/foo", alias="POSTGRES_URL")
     engine_echo: bool = Field(default=False, alias="ENGINE_ECHO")
     jwt_secret_key: str = Field("my_secret_key", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field("my_jwt_algorithm", alias="JWT_ALGORITHM")

@@ -9,5 +9,3 @@ psycopg2-binary==2.9.10
 
 Faker==30.8.2
 python-jose==3.3.0
-
-ruff==0.7.4
