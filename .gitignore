@@ -1,0 +1,10 @@
+venv
+.idea
+.env
+.env.local
+__pycache__/
+*.py[cod]
+.DS_Store
+nginx/logs
+postgres_data/
+billing_api/logs

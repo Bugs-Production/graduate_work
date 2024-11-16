@@ -1,0 +1,54 @@
+services:
+  billing_api:
+    build:
+      dockerfile: Dockerfile
+      context: ./billing_api
+    container_name: billing_api
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/billing_api/src
+      - ./billing_api/logs/:/var/log/app/
+
+  nginx:
+    container_name: billing_nginx
+    build:
+      context: ./nginx/.
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/site.conf:/etc/nginx/conf.d/site.conf
+      - ./nginx/logs/:/var/log/nginx/
+    depends_on:
+      - billing_api
+    ports:
+      - "80:80"
+    networks:
+      - billing_network
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_tasks
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    env_file: .env
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h localhost -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - billing_network
+
+networks:
+  billing_network:
+
+volumes:
+  postgres_data:
