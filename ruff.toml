@@ -10,7 +10,9 @@ lint.ignore = [
     # ambiguous-unicode-character-comment
     "RUF003",
     # Avoid specifying long messages outside the exception class
-    "TRY003"
+    "TRY003",
+    # function-call-in-default-argument
+    "B008",
 ]
 
 lint.select = [
@@ -28,6 +30,10 @@ lint.select = [
     "T10",
     # flake8-simplify
     "SIM",
+    # flake8-print
+    "T20",
+    # blind exceprt
+    "BLE",
     # isort
     "I",
     # mccabe
