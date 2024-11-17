@@ -12,9 +12,9 @@ stop:
 
 .PHONY: format
 format:
+	cd billing_api/src ; mypy --follow-imports=skip .
 	ruff check . --output-format=full --fix
 	ruff format .
-	mypy . --follow-imports=skip
 
 .PHONY: makemigrations
 makemigrations:

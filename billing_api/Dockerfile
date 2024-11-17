@@ -1,11 +1,15 @@
-FROM python:3.11
+FROM python:3.11-slim-bookworm
 
-WORKDIR billing_api/src
+WORKDIR /opt/app/
 
-COPY requirements.txt /billing_api/requirements.txt
+COPY . .
 
-RUN pip install --no-cache-dir -r /billing_api/requirements.txt
+RUN apt-get update \
+    && pip install --no-cache-dir poetry \
+    && poetry config virtualenvs.create false \
+    && poetry install --only main --no-interaction --no-ansi --no-root \
+    && rm -rf ~/.cache
 
-COPY src /billing_api/src
+WORKDIR /opt/app/src
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
