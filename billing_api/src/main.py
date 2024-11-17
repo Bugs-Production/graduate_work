@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from api.v1 import admin, billing
-from core.config import settings
-from db import postgres
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi_pagination import add_pagination
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from api.v1 import admin, billing
+from core.config import settings
+from db import postgres
 
 
 @asynccontextmanager
