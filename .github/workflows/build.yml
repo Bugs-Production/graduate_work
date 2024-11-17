@@ -25,7 +25,7 @@ jobs:
         run: |
           pip install poetry
           cd billing_api
-          poetry install --only lint --quiet --no-interaction --no-ansi --no-root
+          poetry install --quiet --no-interaction --no-ansi --no-root
 
       - name: Check ruff
         run: |
