@@ -25,14 +25,16 @@ jobs:
         run: |
           pip install poetry
           cd billing_api
-          poetry install --only lint
+          poetry install --only lint --quiet --no-interaction --no-ansi --no-root
 
       - name: Check ruff
         run: |
+          cd billing_api
           poetry run ruff check --output-format=full
 
       - name: Check mypy
         run: |
+          cd billing_api
           poetry run mypy . --follow-imports=skip
 
   notify_success:
