@@ -24,6 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
+          cd billing_api
           poetry install --only lint
 
       - name: Check ruff
