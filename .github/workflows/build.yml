@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install poetry
+          pip install poetry --quiet
           cd billing_api
           poetry install --quiet --no-interaction --no-ansi --no-root
 
@@ -34,7 +34,7 @@ jobs:
 
       - name: Check mypy
         run: |
-          cd billing_api
+          cd billing_api/src
           poetry run mypy . --follow-imports=skip
 
   notify_success:
