@@ -10,7 +10,7 @@ services:
     networks:
       - billing_network
     volumes:
-      - ./billing_api/src:/billing_api/src
+      - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
 
   nginx:
