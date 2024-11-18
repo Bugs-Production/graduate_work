@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11",]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install poetry --quiet
+          cd billing_api
+          poetry install --quiet --no-interaction --no-ansi --no-root
+
+      - name: Check ruff
+        run: |
+          cd billing_api
+          poetry run ruff check --output-format=full
+
+      - name: Check mypy
+        run: |
+          cd billing_api/src
+          poetry run mypy . --follow-imports=skip
+
+  notify_success:
+    runs-on: ubuntu-latest
+    needs: lint
+    if: success()
+    steps:
+      - name: Send Telegram Success Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🚀 Repository: ${{ github.repository }}
+            🔖 Commit: ${{ github.sha }}
+            👤 Author: ${{ github.actor }}
+
+            🎉 The pipeline completed successfully! Good job! ✅
+
+            Pull Request: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+  notify_failure:
+    runs-on: ubuntu-latest
+    needs: lint
+    if: failure()
+    steps:
+      - name: Send Telegram Failure Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🚀 Repository: ${{ github.repository }}
+            🔖 Commit: ${{ github.sha }}
+            👤 Author: ${{ github.actor }}
+
+            ⚠️ The pipeline failed on step: ${{ toJson(steps) }} ❌
+            Please review the logs and fix the issue.
+
+            Pull Request: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}

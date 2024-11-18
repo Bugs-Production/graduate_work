@@ -1,0 +1,8 @@
+# ignore all by default
+*
+
+# explicitly allow certain code files, build files config files
+!src
+!poetry.lock
+!pyproject.toml
+!.env

@@ -1,0 +1,8 @@
+.idea
+billing_api/.env
+billing_api/.env.local
+billing_api/logs
+__pycache__/
+*.py[cod]
+.DS_Store
+nginx/logs
