@@ -5,13 +5,12 @@ from sqlalchemy import Boolean, String, Text, func
 from sqlalchemy.dialects.postgresql import ENUM, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from src.db.postgres import Base
-from src.models.enums import SubscriptionStatus
+from models.enums import SubscriptionStatus
 
 
-class BaseModel(Base):
+class Base(DeclarativeBase):
     @declared_attr.directive
     def __tablename__(cls):
         return f"{cls.__name__.lower()}s"
@@ -28,7 +27,7 @@ class BaseModel(Base):
     )
 
 
-class SubscriptionPlan(BaseModel):
+class SubscriptionPlan(Base):
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int]
@@ -38,7 +37,7 @@ class SubscriptionPlan(BaseModel):
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="plan")
 
 
-class Subscription(BaseModel):
+class Subscription(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(PgUUID)
     plan_id: Mapped[uuid.UUID] = mapped_column(PgUUID)
     status: Mapped[SubscriptionStatus] = mapped_column(

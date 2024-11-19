@@ -14,7 +14,7 @@ from db import postgres
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     postgres.engine = create_async_engine(postgres.dsn, echo=settings.engine_echo, future=True)
-    postgres.async_session = async_sessionmaker(bind=postgres.engine, expire_on_commit=False, class_=AsyncSession)
+    postgres.async_session = async_sessionmaker(bind=postgres.engine, expire_on_commit=False, class_=AsyncSession)  # type: ignore[assignment]
     yield
 
 

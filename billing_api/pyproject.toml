@@ -100,3 +100,5 @@ pretty = true
 ignore_missing_imports = false
 warn_redundant_casts = true
 strict_optional = true
+explicit_package_bases = true
+mypy_path = "src"
