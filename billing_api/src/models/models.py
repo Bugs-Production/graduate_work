@@ -39,7 +39,10 @@ class SubscriptionPlan(Base):
 
 class Subscription(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(PgUUID)
-    plan_id: Mapped[uuid.UUID] = mapped_column(PgUUID, ForeignKey("subscriptionplans.id", ondelete="RESTRICT"))
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID,
+        ForeignKey("subscriptionplans.id", ondelete="RESTRICT"),
+    )
     status: Mapped[SubscriptionStatus] = mapped_column(
         ENUM(
             SubscriptionStatus,
