@@ -88,6 +88,12 @@ ignore = [
 [tool.ruff.lint.mccabe]
 max-complexity = 45
 
+[tool.ruff.lint.isort]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+known-local-folder = ["src"]
+split-on-trailing-comma = false
+
+
 [tool.mypy]
 python_version = "3.11"
 pretty = true
