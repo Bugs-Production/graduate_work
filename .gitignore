@@ -9,3 +9,5 @@ nginx/logs
 venv
 .venv/
 .vscode/
+.ruff_cache/
+.mypy_cache/
