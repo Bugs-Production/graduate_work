@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, String, Text, func
+from sqlalchemy import Boolean, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import ENUM, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.ext.declarative import declared_attr
@@ -39,7 +39,7 @@ class SubscriptionPlan(Base):
 
 class Subscription(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(PgUUID)
-    plan_id: Mapped[uuid.UUID] = mapped_column(PgUUID)
+    plan_id: Mapped[uuid.UUID] = mapped_column(PgUUID, ForeignKey("subscriptionplans.id", ondelete="RESTRICT"))
     status: Mapped[SubscriptionStatus] = mapped_column(
         ENUM(
             SubscriptionStatus,
