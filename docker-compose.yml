@@ -47,6 +47,14 @@ services:
     networks:
       - billing_network
 
+  stripe:
+    image: "stripe/stripe-cli:latest"
+    container_name: stripe-cli
+    env_file: billing_api/.env
+    command:
+      "listen --api-key ${STRIPE_API_KEY} --device-name ${STRIPE_DEVICE_NAME} --forward-to localhost:80/api/v1/billing/payment/webhook/"
+    network_mode: host
+
 networks:
   billing_network:
 
