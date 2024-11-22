@@ -21,6 +21,5 @@ class Settings(BaseSettings):
     stripe_api_key: str = Field("stripe_secret_key", alias="STRIPE_API_KEY")
 
 
-settings = Settings()
-
 logging_config.dictConfig(LOGGING)
+settings = Settings()  # type: ignore[call-arg]

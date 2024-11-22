@@ -17,6 +17,8 @@ alembic = "^1.13.2"
 psycopg2-binary = "^2.9.10"
 pre-commit = "^4.0.1"
 stripe = "^11.2.0"
+alembic-postgresql-enum = "^1.4.0"
+orjson = "^3.10.11"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "0.7.4"
@@ -89,9 +91,17 @@ ignore = [
 [tool.ruff.lint.mccabe]
 max-complexity = 45
 
+[tool.ruff.lint.isort]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+known-local-folder = ["src"]
+split-on-trailing-comma = false
+
+
 [tool.mypy]
 python_version = "3.11"
 pretty = true
 ignore_missing_imports = false
 warn_redundant_casts = true
 strict_optional = true
+explicit_package_bases = true
+mypy_path = "src"

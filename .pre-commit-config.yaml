@@ -33,5 +33,4 @@ repos:
         name: mypy
         language: system
         types: [python]
-        entry: mypy
-        args: [--follow-imports=skip]
+        entry: bash -c "cd billing_api && mypy src"
