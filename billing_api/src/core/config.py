@@ -15,4 +15,4 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field("my_jwt_algorithm", alias="JWT_ALGORITHM")
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

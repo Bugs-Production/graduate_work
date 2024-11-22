@@ -7,3 +7,8 @@ __pycache__/
 .DS_Store
 nginx/logs
 venv
+.venv/
+.vscode/
+.ruff_cache/
+.mypy_cache/
+.env
