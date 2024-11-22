@@ -13,7 +13,7 @@ from services.payment_process import PaymentProcessorStripe
 logger = logging.getLogger("billing")
 
 
-class SubscriptionManager:
+class CardsManager:
     def __init__(self, postgres_session: AsyncSession, payment_processor: PaymentProcessorStripe):
         self.postgres_session = postgres_session
         self._payment_processor = payment_processor
@@ -132,8 +132,8 @@ class SubscriptionManager:
 
 
 @lru_cache
-def get_manager_service(
+def get_cards_manager_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
     payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
-) -> SubscriptionManager:
-    return SubscriptionManager(postgres_session, payment_processor)
+) -> CardsManager:
+    return CardsManager(postgres_session, payment_processor)
