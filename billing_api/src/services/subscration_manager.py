@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from uuid import UUID
 
@@ -9,13 +10,15 @@ from db.postgres import get_postgres_session
 from models.user_cards import StatusCardsEnum, UserCardsStripe
 from services.payment_process import PaymentProcessorStripe
 
+logger = logging.getLogger("billing")
+
 
 class SubscriptionManager:
     def __init__(self, postgres_session: AsyncSession, payment_processor: PaymentProcessorStripe):
         self.postgres_session = postgres_session
         self._payment_processor = payment_processor
 
-    async def get_latest_card_user(self, customer: str) -> UserCardsStripe:
+    async def get_latest_card_user(self, customer: str) -> UserCardsStripe | None:
         async with self.postgres_session() as session:
             result = await session.execute(
                 select(UserCardsStripe)
@@ -24,7 +27,7 @@ class SubscriptionManager:
             )
             latest_card = result.scalars().first()
 
-            return latest_card
+            return latest_card if latest_card else None
 
     async def create_user_card(self, user_id: UUID) -> str:
         async with self.postgres_session() as session:
@@ -49,47 +52,83 @@ class SubscriptionManager:
     async def handle_webhook(self, event_type: str, data: dict) -> None:
         obj = data.get("object")
 
-        if event_type == "payment_method.attached" and obj:  # здесь нам прилетают последние 4 цифры карты
-            async with self.postgres_session() as session:
-                last4 = obj.get("card", {}).get("last4")
-                customer = obj.get("customer")
+        if not obj:
+            logger.warning(f"No 'object' found in webhook data for event: {event_type}")
+            return
 
-                # находим свежую запись по добавлению карты юзером
-                latest_card = await self.get_latest_card_user(customer=customer)
+        handlers = {
+            "payment_method.attached": self._handle_payment_method_attached,
+            "setup_intent.succeeded": self._handle_setup_intent_succeeded,
+            "setup_intent.setup_failed": self._handle_setup_intent_failed,
+        }
 
-                if latest_card:
-                    latest_card.last_numbers_card = last4
+        # вызываем обработчик в зависимости от типа события
+        handler = handlers.get(event_type)
+        if handler:
+            logger.info(f"Handling event: {event_type}")
+            await handler(obj)
+        else:
+            logger.warning(f"No handler found for event: {event_type}")
 
-                    session.add(latest_card)
-                    await session.commit()
+    async def _handle_payment_method_attached(self, obj: dict) -> None:
+        """Для получения последних цифр карты."""
+        customer = obj.get("customer")
+        last4 = obj.get("card", {}).get("last4")
 
-        # завершение обработки сохранения карт
-        if event_type == "setup_intent.succeeded" and obj:
-            payment_method = obj.get("payment_method")  # получаем id способа оплаты
-            customer = obj.get("customer")
+        if not customer or not last4:
+            logger.warning("Missing customer or last4 card info in 'payment_method.attached' event.")
+            return
 
-            if payment_method:
-                async with self.postgres_session() as session:
-                    user_card = await self.get_latest_card_user(customer=customer)
+        async with self.postgres_session() as session:
+            # Находим свежую запись по добавлению карты юзером
+            latest_card = await self.get_latest_card_user(customer=customer)
 
-                    if user_card:
-                        user_card.token_card = payment_method
-                        user_card.status = StatusCardsEnum.SUCCESS
+            if latest_card:
+                logger.info(f"Updating last 4 digits for customer {customer}")
+                latest_card.last_numbers_card = last4
 
-                        session.add(user_card)
-                        await session.commit()
+                session.add(latest_card)
+                await session.commit()
+                logger.info(f"Last 4 digits updated successfully for customer {customer}")
 
-        elif event_type == "setup_intent.setup_failed" and obj:
-            customer = obj.get("customer")
+    async def _handle_setup_intent_succeeded(self, obj: dict) -> None:
+        """В случае успешной привязки карты и ее токена."""
+        customer = obj.get("customer")
+        payment_method = obj.get("payment_method")  # получаем id способа оплаты
 
-            async with self.postgres_session() as session:
-                user_card = await self.get_latest_card_user(customer=customer)
+        if not customer or not payment_method:
+            logger.warning("Missing customer or payment method in 'setup_intent.succeeded' event.")
+            return
 
-                if user_card:
-                    user_card.status = StatusCardsEnum.FAIL
+        async with self.postgres_session() as session:
+            user_card = await self.get_latest_card_user(customer=customer)
 
-                    session.add(user_card)
-                    await session.commit()
+            if user_card:
+                logger.info(f"Updating payment method for customer {customer}")
+                user_card.token_card = payment_method
+                user_card.status = StatusCardsEnum.SUCCESS
+
+                session.add(user_card)
+                logger.info(f"Payment method updated successfully for customer {customer}")
+                await session.commit()
+
+    async def _handle_setup_intent_failed(self, obj: dict) -> None:
+        """В случае неуспешной привязки проставляем fail статус."""
+        customer = obj.get("customer")
+
+        if not customer:
+            logger.warning("Missing customer in 'setup_intent.setup_failed' event.")
+            return
+
+        async with self.postgres_session() as session:
+            user_card = await self.get_latest_card_user(customer=customer)
+
+            if user_card:
+                user_card.status = StatusCardsEnum.FAIL
+
+                session.add(user_card)
+                await session.commit()
+                logger.info(f"Card setup marked as failed successfully for customer {customer}")
 
 
 @lru_cache

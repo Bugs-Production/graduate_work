@@ -21,7 +21,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
 
     async def create_card(self, customer_id: str, card_id: UUID) -> str:
         """Создание запроса на привязку карты."""
-        session = stripe.checkout.Session.create(
+        session = await stripe.checkout.Session.create_async(
             mode="setup",
             payment_method_types=["card"],
             success_url="http://localhost:80/success/",
@@ -32,4 +32,5 @@ class PaymentProcessorStripe(BasePaymentProcessor):
 
     async def create_customer(self) -> dict:
         """Создание клиента на стороне Stripe."""
-        return stripe.Customer.create()
+        customer = await stripe.Customer.create_async()
+        return customer
