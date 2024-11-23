@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import UUID, Column, Enum, String
+from sqlalchemy import UUID, Boolean, Column, Enum, String
 
 from models.models import Base
 
@@ -21,3 +21,4 @@ class UserCardsStripe(Base):
         default=StatusCardsEnum.INIT,
     )
     last_numbers_card = Column(String, nullable=True)
+    is_default = Column(Boolean, nullable=False, default=False)
