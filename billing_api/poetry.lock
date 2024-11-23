@@ -1527,6 +1527,17 @@ shellingham = ">=1.3.0"
 typing-extensions = ">=3.7.4.3"
 
 [[package]]
+name = "types-stripe"
+version = "3.5.2.20240106"
+description = "Typing stubs for stripe"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-stripe-3.5.2.20240106.tar.gz", hash = "sha256:63a36958f0dc4a71685b027f0b6d807ff197ee337135ac19a0f8b6132365ca52"},
+    {file = "types_stripe-3.5.2.20240106-py3-none-any.whl", hash = "sha256:9ea7bc9b9889a3d8606114c52dcc70a8fc62d44a46da4bc5ee19f0d463674bb8"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -1826,4 +1837,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "1262f1cd72edd57514ca9da2469b8d50ca37c54d0998c50e88c3bc1ff1a0461d"
+content-hash = "21987853d2fa80320d43ffc2dfae0bc4f0154d8e7e6e17af015a5b1b9fbd6c73"
