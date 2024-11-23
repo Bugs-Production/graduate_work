@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgres import get_postgres_session
 from models.user_cards import StatusCardsEnum, UserCardsStripe
+from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
 from services.payment_process import PaymentProcessorStripe
 
 logger = logging.getLogger("billing")
@@ -28,6 +29,16 @@ class CardsManager:
             latest_card = result.scalars().first()
 
             return latest_card if latest_card else None
+
+    async def _get_is_default_user_card(self, user_id: str) -> UserCardsStripe | None:
+        """Для получения активной дефолтной карты юзера."""
+        async with self.postgres_session() as session:
+            result = await session.execute(
+                select(UserCardsStripe).filter_by(user_id=user_id, status=StatusCardsEnum.SUCCESS, is_default=True)
+            )
+
+            default_card = result.scalars().first()
+            return default_card if default_card else None
 
     async def create_user_card(self, user_id: UUID) -> str:
         async with self.postgres_session() as session:
@@ -107,8 +118,18 @@ class CardsManager:
                 logger.info(f"Updating payment method for customer {customer}")
                 user_card.token_card = payment_method
                 user_card.status = StatusCardsEnum.SUCCESS
+                user_card.is_default = True  # ставим новую карту по умолчанию дефолтной
 
                 session.add(user_card)
+
+                default_card = await self._get_is_default_user_card(user_id=user_card.user_id)
+
+                # если у юзера была другая активная карта, снимаем с нее флаг дефолтной
+                if default_card:
+                    logger.info(f"Removing default status from card {default_card.last_numbers_card}")
+                    default_card.is_default = False
+                    session.add(default_card)
+
                 logger.info(f"Payment method updated successfully for customer {customer}")
                 await session.commit()
 
@@ -129,6 +150,39 @@ class CardsManager:
                 session.add(user_card)
                 await session.commit()
                 logger.info(f"Card setup marked as failed successfully for customer {customer}")
+
+    async def set_default_card(self, user_id: str, card_id: str) -> bool:
+        """Делает карту юзера дефолтной."""
+        async with self.postgres_session() as session:
+            result = await session.execute(
+                select(UserCardsStripe).filter_by(id=card_id, status=StatusCardsEnum.SUCCESS)
+            )
+            user_card = result.scalars().first()
+
+            if not user_card:
+                raise CardNotFoundException("User card not found")
+
+            if str(user_card.user_id) != user_id:
+                raise UserNotOwnerOfCardException("Forbidden")
+
+            # Проверяем, если карта уже дефолтная, то ничего не меняем
+            if user_card.is_default:
+                return False
+
+            # Получаем текущую дефолтную карту, если есть
+            default_card = await self._get_is_default_user_card(user_id=user_id)
+
+            # Снимаем флаг с текущей дефолтной карты
+            if default_card and default_card.id != card_id:
+                default_card.is_default = False
+                session.add(default_card)
+
+            # Делаем новую карту дефолтной
+            user_card.is_default = True
+            session.add(user_card)
+
+            await session.commit()
+            return True
 
 
 @lru_cache
