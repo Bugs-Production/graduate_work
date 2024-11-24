@@ -123,7 +123,7 @@ async def set_default_card_user(
 async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_manager_service)) -> JSONResponse:
     user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
 
-    manager_response = await manager_service.get_all_user_cards_for_user(user_id=str(user_id))
+    manager_response = await manager_service.get_all_user_cards(user_id=str(user_id))
     if manager_response:
         return JSONResponse(content=manager_response, status_code=200)
     return JSONResponse(content={"detail": "User cards not found"}, status_code=404)

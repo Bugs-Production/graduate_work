@@ -184,7 +184,7 @@ class CardsManager:
             await session.commit()
             return True
 
-    async def get_all_user_cards_for_user(self, user_id: str) -> list | None:
+    async def get_all_user_cards(self, user_id: str) -> list | None:
         """Получает все активные карты юзера."""
         async with self.postgres_session() as session:
             result = await session.execute(
