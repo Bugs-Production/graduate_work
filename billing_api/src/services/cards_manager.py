@@ -184,6 +184,24 @@ class CardsManager:
             await session.commit()
             return True
 
+    async def get_all_user_cards_for_user(self, user_id: str) -> list | None:
+        """Получает все активные карты юзера."""
+        async with self.postgres_session() as session:
+            result = await session.execute(
+                select(UserCardsStripe).filter_by(user_id=user_id, status=StatusCardsEnum.SUCCESS)
+            )
+
+            user_cards = result.scalars().all()
+            if user_cards:
+                list_user_cards = []
+
+                for card in user_cards:
+                    card_info = {"id": str(card.id), "last_numbers": card.last_numbers_card, "default": card.is_default}
+                    list_user_cards.append(card_info)
+
+                return list_user_cards
+            return None
+
 
 @lru_cache
 def get_cards_manager_service(

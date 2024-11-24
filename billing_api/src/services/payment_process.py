@@ -25,7 +25,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
             mode="setup",
             payment_method_types=["card"],
             success_url="http://localhost:80/success/",
-            cancel_url="http://localhost:80/cancel/",
+            cancel_url="http://localhost:80/api/v1/billing/get-card-form/",
             customer=customer_id,
         )
         return session.url
