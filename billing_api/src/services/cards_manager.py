@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgres import get_postgres_session
-from models.user_cards import StatusCardsEnum, UserCardsStripe
+from models.enums import StatusCardsEnum
+from models.models import UserCardsStripe
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
 from services.payment_process import PaymentProcessorStripe
 
