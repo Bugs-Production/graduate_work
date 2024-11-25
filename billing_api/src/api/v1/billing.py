@@ -88,9 +88,42 @@ async def set_default_card_user(
         success = await manager_service.set_default_card(user_id=str(user_id), card_id=str(card_id))
         if success:
             return JSONResponse(content={"detail": "success"}, status_code=200)
-        else:
-            return JSONResponse(content={"detail": "Card is already set as default"}, status_code=400)
+        return JSONResponse(content={"detail": "Card is already set as default"}, status_code=400)
     except CardNotFoundException as e:
         return JSONResponse(content={"detail": str(e)}, status_code=404)
     except UserNotOwnerOfCardException as e:
         return JSONResponse(content={"detail": str(e)}, status_code=403)
+
+
+@router.get(
+    "/all-user-cards/",
+    summary="Список карт юзера.",
+    description="Получает список активных карт юзера.",
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Успешный запрос.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "15153fbb-b2b6-4ad4-b226-6aff38305f2b",
+                            "last_numbers": "4242",
+                            "default": True,
+                        },
+                    ]
+                }
+            },
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Карты не найдены",
+            "content": {"application/json": {"example": {"detail": "User cards not found"}}},
+        },
+    },
+)
+async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_manager_service)) -> JSONResponse:
+    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
+
+    manager_response = await manager_service.get_all_user_cards(user_id=str(user_id))
+    if manager_response:
+        return JSONResponse(content=manager_response, status_code=200)
+    return JSONResponse(content={"detail": "User cards not found"}, status_code=404)
