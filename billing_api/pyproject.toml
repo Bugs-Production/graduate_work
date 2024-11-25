@@ -19,6 +19,7 @@ pre-commit = "^4.0.1"
 stripe = "^11.2.0"
 alembic-postgresql-enum = "^1.4.0"
 orjson = "^3.10.11"
+greenlet = "^3.1.1"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "0.7.4"
@@ -87,6 +88,8 @@ ignore = [
     "TRY003",
     # function-call-in-default-argument
     "B008",
+    # Standard pseudo-random generators are not suitable for cryptographic purposes
+    "S311"
 ]
 
 [tool.ruff.lint.mccabe]
