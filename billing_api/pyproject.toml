@@ -89,7 +89,7 @@ ignore = [
     # function-call-in-default-argument
     "B008",
     # Standard pseudo-random generators are not suitable for cryptographic purposes
-    "S311"
+    "S311",
 ]
 
 [tool.ruff.lint.mccabe]
