@@ -46,7 +46,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
     async def remove_card(self, token_card: str) -> bool:
         """Запрос на удаление карты у юзера."""
         try:
-            response = await stripe.PaymentMethod.detach_async(payment_method=token_card)
+            response = await stripe.PaymentMethod.detach_async(payment_method=token_card)  # type: ignore[attr-defined]
             # если у response есть id карты, считаем, что запрос прошел успешно
             return bool(hasattr(response, "id"))
         except stripe.error.APIError as e:
