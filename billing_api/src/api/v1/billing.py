@@ -23,6 +23,15 @@ async def get_add_card_form(request: Request):
     return templates.TemplateResponse("checkout-session.html", {"request": request})
 
 
+@router.get(
+    "/success-card/",
+    summary="Шаблон успешной привязки",
+    description="Возвращает HTML-форму после успешной привязки карты.",
+)
+async def success_card(request: Request):
+    return templates.TemplateResponse("success_redirect.html", {"request": request})
+
+
 @router.post(
     "/create-checkout-session/",
     summary="Создание сессии привязки карты",
