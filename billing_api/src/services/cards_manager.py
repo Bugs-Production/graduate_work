@@ -203,6 +203,44 @@ class CardsManager:
                 return list_user_cards
             return None
 
+    async def remove_card_from_a_user(self, card_id: str, user_id: str) -> bool | Exception:
+        """Удаляет карту юзера."""
+        async with self.postgres_session() as session:
+            result = await session.execute(select(UserCardsStripe).filter_by(id=card_id))
+            user_card = result.scalars().first()
+
+            if not user_card:
+                raise CardNotFoundException("User card not found")
+
+            if str(user_card.user_id) != user_id:
+                raise UserNotOwnerOfCardException("Forbidden")
+
+            response = await self._payment_processor.remove_card(token_card=user_card.token_card)
+
+            if not response:
+                return False
+
+            # удаляем карту на нашей стороне
+            await session.delete(user_card)
+            await session.commit()
+
+            # проверяем была ли она дефолтной
+            if user_card.is_default:
+                # если да, то пытаемся найти другую и сделать ее дефолтной
+                last_active_card_result = await session.execute(
+                    select(UserCardsStripe)
+                    .filter_by(user_id=user_id, status=StatusCardsEnum.SUCCESS)
+                    .order_by(UserCardsStripe.created_at.desc())
+                )
+                last_active_card = last_active_card_result.scalars().first()
+
+                if last_active_card:
+                    last_active_card.is_default = True
+                    session.add(last_active_card)
+                    await session.commit()
+
+            return True
+
 
 @lru_cache
 def get_cards_manager_service(

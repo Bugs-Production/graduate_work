@@ -127,3 +127,43 @@ async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_m
     if manager_response:
         return JSONResponse(content=manager_response, status_code=200)
     return JSONResponse(content={"detail": "User cards not found"}, status_code=404)
+
+
+@router.delete(
+    "/delete-card/",
+    summary="Удаляет карту у юзера.",
+    description="Удаляет карту у юзера, так же дополнительно проверяет нет ли другой, чтоб сделать ее дефолтной.",
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Успешный запрос.",
+            "content": {"application/json": {"example": {"detail": "success"}}},
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            "description": "Плохой запрос",
+            "content": {"application/json": {"example": {"detail": "Sorry try again later"}}},
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Доступ запрещен",
+            "content": {"application/json": {"example": {"detail": "Forbidden"}}},
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Карта не найдена",
+            "content": {"application/json": {"example": {"detail": "User card not found"}}},
+        },
+    },
+)
+async def delete_card_user(
+    card_id: uuid.UUID,
+    manager_service: CardsManager = Depends(get_cards_manager_service),
+) -> JSONResponse:
+    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
+
+    try:
+        result_service = await manager_service.remove_card_from_a_user(card_id=card_id, user_id=str(user_id))
+        if result_service:
+            return JSONResponse(content={"detail": "success"}, status_code=200)
+        return JSONResponse(content={"detail": "Sorry try again later"}, status_code=400)
+    except CardNotFoundException as e:
+        return JSONResponse(content={"detail": str(e)}, status_code=404)
+    except UserNotOwnerOfCardException as e:
+        return JSONResponse(content={"detail": str(e)}, status_code=403)
