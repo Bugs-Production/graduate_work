@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi_pagination import add_pagination
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from starlette.staticfiles import StaticFiles
 
 from api.v1 import admin, billing
 from core.config import settings
@@ -30,6 +31,7 @@ app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
 app.include_router(admin.router, prefix="/api/v1/admin/billing", tags=["admin_billing"])
 
 add_pagination(app)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Для локального запуска
 if __name__ == "__main__":
