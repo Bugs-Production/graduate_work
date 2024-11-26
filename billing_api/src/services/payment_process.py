@@ -32,8 +32,8 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         session = await stripe.checkout.Session.create_async(  # type: ignore[attr-defined]
             mode="setup",
             payment_method_types=["card"],
-            success_url="http://localhost:80/api/v1/billing/success-card/",
-            cancel_url="http://localhost:80/api/v1/billing/get-card-form/",
+            success_url="http://localhost:80/api/v1/billing/success-card/",  # TODO
+            cancel_url="http://localhost:80/api/v1/billing/get-card-form/",  # TODO
             customer=customer_id,
         )
         return session.url
