@@ -15,10 +15,10 @@ class SubscriptionPlanCreate(SubscriptionPlanBase):
 
 
 class SubscriptionPlanUpdate(BaseModel):
-    title: str | None
-    description: str | None
-    price: int | None
-    duration_days: int | None
+    title: str | None = None
+    description: str | None = None
+    price: int | None = None
+    duration_days: int | None = None
 
 
 class SubscriptionPlanResponse(SubscriptionPlanBase):

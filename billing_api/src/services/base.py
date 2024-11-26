@@ -41,47 +41,44 @@ class AbstractRepository(ABC):
 class SQLAlchemyRepository(
     AbstractRepository, Generic[ModelType, CreateSchemaType, UpdateSchemaType]
 ):
-    def __init__(self, model: type[ModelType]):
+    def __init__(self, model: type[ModelType], session: AsyncSession):
         self._model = model
+        self._session = session
 
-    async def create(self, session: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(self, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
         entity = self._model(**obj_in_data)
-        session.add(entity)
-        await session.commit()
-        await session.refresh(entity)
+        self._session.add(entity)
+        await self._session.commit()
+        await self._session.refresh(entity)
         return entity
 
-    async def get_one_or_none(self, session: AsyncSession, entity_id: UUID) -> ModelType | None:
+    async def get_one_or_none(self, entity_id: UUID) -> ModelType | None:
         stmt = select(self._model).where(self._model.id == entity_id)
-        result = await session.execute(stmt)
+        result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get(self, session: AsyncSession, entity_id: UUID) -> ModelType:
-        db_obj = await self.get_one_or_none(session, entity_id=entity_id)
+    async def get(self, entity_id: UUID) -> ModelType:
+        db_obj = await self.get_one_or_none(entity_id=entity_id)
         if not db_obj:
             raise ObjectNotFoundError(f"Запрашиваемый объект с id={entity_id} не найден")
         return db_obj
 
-    async def get_many(
-        self, session: AsyncSession, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[ModelType]:
-        stmt = select(self._model).limit(limit).offset(offset)
-        result = await session.execute(stmt)
+    async def get_many(self) -> Sequence[ModelType]:
+        stmt = select(self._model)
+        result = await self._session.execute(stmt)
         return result.scalars().all()
 
-    async def update(
-        self, session: AsyncSession, *, entity_id: UUID, obj_in: UpdateSchemaType
-    ) -> ModelType:
-        db_obj = await self.get(session, entity_id=entity_id)
+    async def update(self, entity_id: UUID, obj_in: UpdateSchemaType) -> ModelType:
+        db_obj = await self.get(entity_id=entity_id)
         update_dict = obj_in.model_dump(exclude_none=True, exclude_unset=True)
         for field, value in update_dict.items():
             setattr(db_obj, field, value)
-        db_obj = await session.merge(db_obj)
-        await session.commit()
+        db_obj = await self._session.merge(db_obj)
+        await self._session.commit()
         return db_obj
 
-    async def delete(self, session: AsyncSession, *, entity_id: UUID) -> None:
-        db_obj = await self.get(session, entity_id=entity_id)
-        await session.delete(db_obj)
-        await session.commit()
+    async def delete(self, entity_id: UUID) -> None:
+        db_obj = await self.get(entity_id=entity_id)
+        await self._session.delete(db_obj)
+        await self._session.commit()
