@@ -18,8 +18,11 @@ class SubscriptionCreateFull(SubscriptionCreate):
     end_date: datetime
 
 
-class SubscriptionUpdate(SubscriptionCreate):
-    pass  # TODO
+class SubscriptionUpdate(BaseModel):
+    status: SubscriptionStatus | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    auto_renewal: bool | None = None
 
 
 class SubscriptionResponse(SubscriptionCreateFull):
