@@ -20,31 +20,43 @@ class CardsManager:
         self.postgres_session = postgres_session
         self._payment_processor = payment_processor
 
-    async def get_latest_card_user(self, customer: str) -> UserCardsStripe | None:
+    async def _get_card_user(
+        self,
+        card_id: str | None = None,
+        customer: str | None = None,
+        user_id: str | None = None,
+        status: StatusCardsEnum | None = None,
+        is_default: bool | None = None,
+        order_by: str = "desc",
+    ) -> UserCardsStripe | None:
+        """Метод для поиска карты юзера в зависимости от параметров."""
         async with self.postgres_session() as session:
-            result = await session.execute(
-                select(UserCardsStripe)
-                .filter_by(stripe_user_id=customer, status=StatusCardsEnum.INIT)
-                .order_by(UserCardsStripe.created_at.desc())
-            )
-            latest_card = result.scalars().first()
+            query = select(UserCardsStripe)
 
-            return latest_card if latest_card else None
+            if card_id:
+                query = query.filter_by(id=card_id)
+            if customer:
+                query = query.filter_by(stripe_user_id=customer)
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+            if status:
+                query = query.filter_by(status=status)
+            if is_default is not None:
+                query = query.filter_by(is_default=is_default)
 
-    async def _get_is_default_user_card(self, user_id: str) -> UserCardsStripe | None:
-        """Для получения активной дефолтной карты юзера."""
-        async with self.postgres_session() as session:
-            result = await session.execute(
-                select(UserCardsStripe).filter_by(user_id=user_id, status=StatusCardsEnum.SUCCESS, is_default=True)
-            )
+            if order_by == "desc":
+                query = query.order_by(UserCardsStripe.created_at.desc())
+            else:
+                query = query.order_by(UserCardsStripe.created_at.asc())
 
-            default_card = result.scalars().first()
-            return default_card if default_card else None
+            result = await session.execute(query)
+            card = result.scalars().first()
+
+            return card if card else None
 
     async def create_user_card(self, user_id: UUID) -> str:
         async with self.postgres_session() as session:
-            user_cards = await session.scalars(select(UserCardsStripe).filter_by(user_id=user_id))
-            user_card = user_cards.first()
+            user_card = await self._get_card_user(user_id=str(user_id))
 
             if user_card is None:
                 # в случае когда юзер привязывает карту первый раз
@@ -93,7 +105,7 @@ class CardsManager:
 
         async with self.postgres_session() as session:
             # Находим свежую запись по добавлению карты юзером
-            latest_card = await self.get_latest_card_user(customer=customer)
+            latest_card = await self._get_card_user(customer=customer, status=StatusCardsEnum.INIT)
 
             if latest_card:
                 logger.info(f"Updating last 4 digits for customer {customer}")
@@ -113,7 +125,7 @@ class CardsManager:
             return
 
         async with self.postgres_session() as session:
-            user_card = await self.get_latest_card_user(customer=customer)
+            user_card = await self._get_card_user(customer=customer, status=StatusCardsEnum.INIT)
 
             if user_card:
                 logger.info(f"Updating payment method for customer {customer}")
@@ -123,7 +135,11 @@ class CardsManager:
 
                 session.add(user_card)
 
-                default_card = await self._get_is_default_user_card(user_id=user_card.user_id)
+                default_card = await self._get_card_user(
+                    user_id=user_card.user_id,
+                    status=StatusCardsEnum.SUCCESS,
+                    is_default=True,
+                )
 
                 # если у юзера была другая активная карта, снимаем с нее флаг дефолтной
                 if default_card:
@@ -143,7 +159,7 @@ class CardsManager:
             return
 
         async with self.postgres_session() as session:
-            user_card = await self.get_latest_card_user(customer=customer)
+            user_card = await self._get_card_user(customer=customer, status=StatusCardsEnum.INIT)
 
             if user_card:
                 user_card.status = StatusCardsEnum.FAIL
@@ -155,10 +171,7 @@ class CardsManager:
     async def set_default_card(self, user_id: str, card_id: str) -> bool:
         """Делает карту юзера дефолтной."""
         async with self.postgres_session() as session:
-            result = await session.execute(
-                select(UserCardsStripe).filter_by(id=card_id, status=StatusCardsEnum.SUCCESS)
-            )
-            user_card = result.scalars().first()
+            user_card = await self._get_card_user(card_id=card_id, status=StatusCardsEnum.SUCCESS)
 
             if not user_card:
                 raise CardNotFoundException("User card not found")
@@ -171,7 +184,7 @@ class CardsManager:
                 return False
 
             # Получаем текущую дефолтную карту, если есть
-            default_card = await self._get_is_default_user_card(user_id=user_id)
+            default_card = await self._get_card_user(user_id=user_id, status=StatusCardsEnum.SUCCESS, is_default=True)
 
             # Снимаем флаг с текущей дефолтной карты
             if default_card and default_card.id != card_id:
@@ -202,6 +215,38 @@ class CardsManager:
 
                 return list_user_cards
             return None
+
+    async def remove_card_from_user(self, card_id: str, user_id: str) -> bool:
+        """Удаляет карту юзера."""
+        async with self.postgres_session() as session:
+            user_card = await self._get_card_user(card_id=card_id)
+
+            if not user_card:
+                raise CardNotFoundException("User card not found")
+
+            if str(user_card.user_id) != user_id:
+                raise UserNotOwnerOfCardException("Forbidden")
+
+            response = await self._payment_processor.remove_card(token_card=user_card.token_card)
+
+            if not response:
+                return False
+
+            # удаляем карту на нашей стороне
+            await session.delete(user_card)
+            await session.commit()
+
+            # проверяем была ли она дефолтной
+            if user_card.is_default:
+                # если да, то пытаемся найти другую и сделать ее дефолтной
+                last_active_card = await self._get_card_user(user_id=user_id, status=StatusCardsEnum.SUCCESS)
+
+                if last_active_card:
+                    last_active_card.is_default = True
+                    session.add(last_active_card)
+                    await session.commit()
+
+            return True
 
 
 @lru_cache
