@@ -26,13 +26,11 @@ class AdminTransactionService:
             return notification
 
     async def get_user_transactions(
-        self, user_id: UUID, subscription_id: UUID | None, status: str | None, payment_type: str | None
+        self, user_id: UUID, subscription_id: UUID | None, query_params: dict[str, str]
     ) -> list[Transaction] | None:
         filter_params = {"user_id": str(user_id)}
-        if status:
-            filter_params.update({"status": status})
-        if payment_type:
-            filter_params.update({"payment_type": payment_type})
+        if query_params:
+            filter_params.update(query_params)
         if subscription_id:
             filter_params.update({"subscription_id": str(subscription_id)})
 

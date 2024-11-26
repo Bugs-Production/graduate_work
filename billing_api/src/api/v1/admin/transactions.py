@@ -1,10 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_pagination import Page, paginate
 
-from models.enums import PaymentType, TransactionStatus
+from api.v1.utils import transaction_filters_query_params
 from schemas.admin import TransactionSchema, TransactionSchemaShort
 from services.admin import AdminTransactionService, get_admin_transaction_service
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
@@ -26,7 +25,7 @@ router = APIRouter()
 async def get_transaction(
     transaction_id: UUID,
     admin_service: AdminTransactionService = Depends(get_admin_transaction_service),
-) -> Page[TransactionSchema] | JSONResponse:
+) -> Page[TransactionSchema]:
     try:
         return await admin_service.get_transaction_by_id(str(transaction_id))
     except TransactionNotFoundError as e:
@@ -50,28 +49,11 @@ async def get_transaction(
 async def get_user_transactions(
     user_id: UUID,
     subscription_id: UUID | None = None,
-    tr_status: str | None = Query(
-        default=None,
-        description=f"Filter by status. Available values: {TransactionStatus.values()}",
-        alias="status",
-    ),
-    payment_type: str | None = Query(
-        default=None,
-        description=f"Filter by payment_type. Available values: {PaymentType.values()}",
-    ),
+    query_params: dict[str, str] = Depends(transaction_filters_query_params),
     admin_service: AdminTransactionService = Depends(get_admin_transaction_service),
-) -> Page[TransactionSchemaShort] | JSONResponse:
-    if tr_status and tr_status not in TransactionStatus.values():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"'status' should be in {TransactionStatus.values()}"
-        )
-    if payment_type and payment_type not in PaymentType.values():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"'payment_type' should be in {PaymentType.values()}"
-        )
-
+) -> Page[TransactionSchemaShort]:
     try:
-        transactions_list = await admin_service.get_user_transactions(user_id, subscription_id, tr_status, payment_type)
+        transactions_list = await admin_service.get_user_transactions(user_id, subscription_id, query_params)
     except ORMBadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from None
 
