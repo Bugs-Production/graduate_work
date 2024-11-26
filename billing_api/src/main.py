@@ -7,7 +7,7 @@ from fastapi_pagination import add_pagination
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from starlette.staticfiles import StaticFiles
 
-from api.v1 import admin, billing, subscription_plan
+from api.v1 import admin, billing, subscription, subscription_plan
 from core.config import settings
 from db import postgres
 
@@ -30,6 +30,7 @@ app = FastAPI(
 app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
 app.include_router(admin.router, prefix="/api/v1/admin/billing", tags=["admin_billing"])
 app.include_router(subscription_plan.router, prefix="/api/v1/subscription_plans", tags=["subscription_plans"])
+app.include_router(subscription.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 
 add_pagination(app)
 app.mount("/static", StaticFiles(directory="static"), name="static")
