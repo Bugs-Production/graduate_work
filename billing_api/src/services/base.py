@@ -38,9 +38,7 @@ class AbstractRepository(ABC):
         raise NotImplementedError
 
 
-class SQLAlchemyRepository(
-    AbstractRepository, Generic[ModelType, CreateSchemaType, UpdateSchemaType]
-):
+class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: type[ModelType], session: AsyncSession):
         self._model = model
         self._session = session

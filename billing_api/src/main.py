@@ -15,9 +15,7 @@ from db import postgres
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     postgres.engine = create_async_engine(postgres.dsn, echo=settings.engine_echo, future=True)
-    postgres.async_session = async_sessionmaker(
-        bind=postgres.engine, expire_on_commit=False, class_=AsyncSession
-    )  # type: ignore[assignment]
+    postgres.async_session = async_sessionmaker(bind=postgres.engine, expire_on_commit=False, class_=AsyncSession)  # type: ignore[assignment]
     yield
 
 
@@ -31,9 +29,7 @@ app = FastAPI(
 
 app.include_router(billing.router, prefix="/api/v1/billing", tags=["billing"])
 app.include_router(admin.router, prefix="/api/v1/admin/billing", tags=["admin_billing"])
-app.include_router(
-    subscription_plan.router, prefix="/api/v1/subscription_plans", tags=["subscription_plans"]
-)
+app.include_router(subscription_plan.router, prefix="/api/v1/subscription_plans", tags=["subscription_plans"])
 
 add_pagination(app)
 app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -5,11 +5,7 @@ from fastapi import APIRouter, Depends, Path
 from fastapi_pagination import Page, paginate
 
 from api.utils import generate_error_responses
-from schemas.subscription_plan import (
-    SubscriptionPlanCreate,
-    SubscriptionPlanResponse,
-    SubscriptionPlanUpdate,
-)
+from schemas.subscription_plan import SubscriptionPlanCreate, SubscriptionPlanResponse, SubscriptionPlanUpdate
 from services.subscription_plan import SubscriptionPlanService, get_subscription_plan_service
 
 router = APIRouter()
@@ -73,6 +69,4 @@ async def update_subscription_plan(
     subscription_plan_id: UUID = Path(..., description="ID плана подписки"),
     subscription_plan_service: SubscriptionPlanService = Depends(get_subscription_plan_service),
 ):
-    return await subscription_plan_service.update_subscription_plan(
-        subscription_plan_id, subscription_plan_data
-    )
+    return await subscription_plan_service.update_subscription_plan(subscription_plan_id, subscription_plan_data)

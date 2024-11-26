@@ -12,9 +12,7 @@ from services.base import SQLAlchemyRepository
 from services.exceptions import ObjectAlreadyExistsError
 
 
-class SubscriptionPlanService(
-    SQLAlchemyRepository[SubscriptionPlan, SubscriptionPlanCreate, SubscriptionPlanUpdate]
-):
+class SubscriptionPlanService(SQLAlchemyRepository[SubscriptionPlan, SubscriptionPlanCreate, SubscriptionPlanUpdate]):
     def __init__(self, session: AsyncSession):
         super().__init__(model=SubscriptionPlan, session=session)
 
@@ -23,9 +21,7 @@ class SubscriptionPlanService(
         existing_plan = await self._session.execute(stmt)
         return existing_plan.scalar_one_or_none() is not None
 
-    async def create_new_subscription_plan(
-        self, subscription_plan_data: SubscriptionPlanCreate
-    ) -> SubscriptionPlan:
+    async def create_new_subscription_plan(self, subscription_plan_data: SubscriptionPlanCreate) -> SubscriptionPlan:
         if await self.check_subscription_plan_exists_by_title(subscription_plan_data.title):
             raise ObjectAlreadyExistsError("План подписки с выбранным заголовком уже существует.")
         return await self.create(subscription_plan_data)
