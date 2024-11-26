@@ -24,3 +24,8 @@ class ObjectNotFoundError(HTTPException):
 class ObjectAlreadyExistsError(HTTPException):
     def __init__(self, detail: str):
         super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=detail)
+
+
+class ActiveSubscriptionExsistsError(HTTPException):
+    def __init__(self, detail: str):
+        super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=detail)
