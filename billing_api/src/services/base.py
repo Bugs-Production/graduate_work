@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from typing import Generic, TypeVar
 from uuid import UUID
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +43,7 @@ class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaTy
         self._session = session
 
     async def create(self, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
+        obj_in_data = obj_in.model_dump(exclude_none=True, exclude_unset=True)
         entity = self._model(**obj_in_data)
         self._session.add(entity)
         await self._session.commit()
