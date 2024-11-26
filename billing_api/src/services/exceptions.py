@@ -4,3 +4,11 @@ class CardNotFoundException(Exception):
 
 class UserNotOwnerOfCardException(Exception):
     pass
+
+
+class ORMBadRequestError(Exception):
+    pass
+
+
+class TransactionNotFoundError(Exception):
+    pass
