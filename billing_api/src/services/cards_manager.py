@@ -239,12 +239,7 @@ class CardsManager:
             # проверяем была ли она дефолтной
             if user_card.is_default:
                 # если да, то пытаемся найти другую и сделать ее дефолтной
-                last_active_card_result = await session.execute(
-                    select(UserCardsStripe)
-                    .filter_by(user_id=user_id, status=StatusCardsEnum.SUCCESS)
-                    .order_by(UserCardsStripe.created_at.desc())
-                )
-                last_active_card = last_active_card_result.scalars().first()
+                last_active_card = await self._get_card_user(user_id=user_id, status=StatusCardsEnum.SUCCESS)
 
                 if last_active_card:
                     last_active_card.is_default = True
