@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SubscriptionPlanBase(BaseModel):
-    title: str
-    description: str
-    price: int
-    duration_days: int
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=1, max_length=1000)
+    price: int = Field(..., ge=0)
+    duration_days: int = Field(..., gt=0)
 
 
 class SubscriptionPlanCreate(SubscriptionPlanBase):
@@ -15,10 +15,10 @@ class SubscriptionPlanCreate(SubscriptionPlanBase):
 
 
 class SubscriptionPlanUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    price: int | None = None
-    duration_days: int | None = None
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, min_length=1, max_length=1000)
+    price: int | None = Field(None, ge=0)
+    duration_days: int | None = Field(default=None, gt=0)
 
 
 class SubscriptionPlanResponse(SubscriptionPlanBase):

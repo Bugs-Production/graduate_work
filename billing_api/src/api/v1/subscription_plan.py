@@ -42,7 +42,7 @@ async def create_subscription_plan(
     subscription_plan_data: SubscriptionPlanCreate,
     subscription_plan_service: SubscriptionPlanService = Depends(get_subscription_plan_service),
 ):
-    return await subscription_plan_service.create(subscription_plan_data)
+    return await subscription_plan_service.create_new_subscription_plan(subscription_plan_data)
 
 
 @router.get(
@@ -73,4 +73,6 @@ async def update_subscription_plan(
     subscription_plan_id: UUID = Path(..., description="ID плана подписки"),
     subscription_plan_service: SubscriptionPlanService = Depends(get_subscription_plan_service),
 ):
-    return await subscription_plan_service.update(subscription_plan_id, subscription_plan_data)
+    return await subscription_plan_service.update_subscription_plan(
+        subscription_plan_id, subscription_plan_data
+    )
