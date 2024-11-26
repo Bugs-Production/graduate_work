@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_pagination import Page, paginate
 
 from api.v1.utils import transaction_filters_query_params
-from schemas.admin import TransactionSchema, TransactionSchemaShort
+from schemas.admin import TransactionSchemaBaseResponse, TransactionSchemaResponse
 from services.admin import AdminTransactionService, get_admin_transaction_service
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
 
@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get(
     "/{transaction_id}",
-    response_model=TransactionSchema,
+    response_model=TransactionSchemaResponse,
     summary="Вывести информацию о транзакции",
     description="Вывести подробную информацию о транзакции",
     responses={
@@ -25,7 +25,7 @@ router = APIRouter()
 async def get_transaction(
     transaction_id: UUID,
     admin_service: AdminTransactionService = Depends(get_admin_transaction_service),
-) -> Page[TransactionSchema]:
+) -> Page[TransactionSchemaResponse]:
     try:
         return await admin_service.get_transaction_by_id(str(transaction_id))
     except TransactionNotFoundError as e:
@@ -34,7 +34,7 @@ async def get_transaction(
 
 @router.get(
     "/",
-    response_model=Page[TransactionSchemaShort],
+    response_model=Page[TransactionSchemaBaseResponse],
     summary="Вывести транзакции пользователя",
     description="Вывести транзакции пользователя, возможно отфильтровать по параметрам",
     responses={
@@ -51,7 +51,7 @@ async def get_user_transactions(
     subscription_id: UUID | None = None,
     query_params: dict[str, str] = Depends(transaction_filters_query_params),
     admin_service: AdminTransactionService = Depends(get_admin_transaction_service),
-) -> Page[TransactionSchemaShort]:
+) -> Page[TransactionSchemaBaseResponse]:
     try:
         transactions_list = await admin_service.get_user_transactions(user_id, subscription_id, query_params)
     except ORMBadRequestError as e:

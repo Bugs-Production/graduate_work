@@ -11,7 +11,7 @@ class IDMixin(BaseModel):
         from_attributes = True
 
 
-class TransactionSchemaShort(IDMixin):
+class TransactionSchemaBaseResponse(IDMixin):
     subscription_id: UUID
     user_id: UUID
     payment_type: str
@@ -19,7 +19,7 @@ class TransactionSchemaShort(IDMixin):
     status: str
 
 
-class TransactionSchema(TransactionSchemaShort):
+class TransactionSchemaResponse(TransactionSchemaBaseResponse):
     subscription_id: UUID
     user_id: UUID
     payment_type: str
