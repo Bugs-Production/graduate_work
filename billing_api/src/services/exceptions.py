@@ -11,9 +11,12 @@ class UserNotOwnerOfCardException(Exception):
     pass
 
 
-class BaseAPIException(HTTPException):
-    status_code: int
-    detail: str
+class ORMBadRequestError(Exception):
+    pass
+
+
+class TransactionNotFoundError(Exception):
+    pass
 
 
 class BadRequestError(HTTPException):
