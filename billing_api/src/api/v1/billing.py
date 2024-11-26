@@ -139,7 +139,7 @@ async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_m
             "content": {"application/json": {"example": {"detail": "success"}}},
         },
         status.HTTP_400_BAD_REQUEST: {
-            "description": "Плохой запрос",
+            "description": "Некорректный запрос",
             "content": {"application/json": {"example": {"detail": "Sorry try again later"}}},
         },
         status.HTTP_403_FORBIDDEN: {
@@ -159,7 +159,7 @@ async def delete_card_user(
     user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
 
     try:
-        result_service = await manager_service.remove_card_from_a_user(card_id=card_id, user_id=str(user_id))
+        result_service = await manager_service.remove_card_from_user(card_id=card_id, user_id=str(user_id))
         if result_service:
             return JSONResponse(content={"detail": "success"}, status_code=200)
         return JSONResponse(content={"detail": "Sorry try again later"}, status_code=400)
