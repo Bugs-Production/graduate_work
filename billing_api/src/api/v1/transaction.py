@@ -18,7 +18,7 @@ router = APIRouter()
     description="Вывести подробную информацию о транзакции",
     responses={
         status.HTTP_404_NOT_FOUND: {
-            "content": {"application/json": {"example": {"detail": "Internal server error"}}},
+            "content": {"application/json": {"example": {"detail": "Error message"}}},
         },
     },
 )
@@ -39,10 +39,10 @@ async def get_transaction(
     description="Вывести транзакции пользователя, возможно отфильтровать по параметрам",
     responses={
         status.HTTP_400_BAD_REQUEST: {
-            "content": {"application/json": {"example": {"detail": "Internal server error"}}},
+            "content": {"application/json": {"example": {"detail": "Error message"}}},
         },
         status.HTTP_404_NOT_FOUND: {
-            "content": {"application/json": {"example": {"detail": "Internal server error"}}},
+            "content": {"application/json": {"example": {"detail": "Error message"}}},
         },
     },
 )
