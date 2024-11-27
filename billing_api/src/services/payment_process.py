@@ -100,3 +100,9 @@ class PaymentProcessorStripe(BasePaymentProcessor):
 
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
+
+    def cancel_payment_intent(self, payment_intent_id: str):
+        """
+        Реализация отмены PaymentIntent.
+        """
+        return stripe.PaymentIntent.cancel(payment_intent_id)
