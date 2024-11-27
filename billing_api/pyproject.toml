@@ -119,6 +119,7 @@ mypy_path = "src"
 
 
 [tool.pytest.ini_options]
+pythonpath = [".", "src"]
 filterwarnings = [
     "ignore:Please use `import python_multipart` instead",
     "ignore:Support for class-based `config` is deprecated, use ConfigDict instead",
