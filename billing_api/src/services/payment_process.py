@@ -23,7 +23,14 @@ class BasePaymentProcessor(ABC):
         pass
 
     @abstractmethod
-    async def process_payment(self, amount: int, currency: str, customer_id: str, payment_id: str) -> dict:
+    async def process_payment(
+        self,
+        amount: int,
+        currency: str,
+        customer_id: str | None = None,
+        payment_method: str | None = None,
+        description: str | None = None,
+    ) -> dict:
         """Инициализирует оплату"""
         pass
 
@@ -62,18 +69,34 @@ class PaymentProcessorStripe(BasePaymentProcessor):
             return False
 
     async def process_payment(
-        self, amount: int, currency: str, customer_id: str, payment_id: str
+        self,
+        amount: int,
+        currency: str,
+        customer_id: str | None = None,
+        payment_method: str | None = None,
+        description: str | None = None,
     ) -> dict:
-        """Создание платежного намерения"""
+        """
+        Создание платежа.
+
+        :param amount: Сумма платежа в минимальном номинале валюты.
+        :param currency: Валюта.
+        :param customer_id: ID клиента в Stripe.
+        :param payment_method: ID метода оплаты Stripe.
+        :param description: Описание платежа.
+        """
         try:
-            payment_intent = stripe.PaymentIntent.create(
-                amount=amount,
-                currency=currency,
-                customer=customer_id,
-                confirm=True,
-                payment_method=payment_id,
-                off_session=True,
-            )
-            return {"client_secret": payment_intent["client_secret"]}
+            stripe_args = {"amount": amount, "currency": currency, "description": description}
+
+            if customer_id:
+                stripe_args["customer"] = customer_id
+
+            if payment_method:
+                stripe_args["payment_method"] = payment_method
+                stripe_args["off_session"] = True
+                stripe_args["confirm"] = True
+
+            return stripe.PaymentIntent.create(**stripe_args)
+
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
