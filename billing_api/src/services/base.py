@@ -58,7 +58,7 @@ class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaTy
     async def get(self, entity_id: UUID) -> ModelType:
         db_obj = await self.get_one_or_none(entity_id=entity_id)
         if not db_obj:
-            raise ObjectNotFoundError(f"Запрашиваемый объект с id={entity_id} не найден")
+            raise ObjectNotFoundError(f"Запрашиваемый объект {self._model.__name__} с id={entity_id} не найден")
         return db_obj
 
     async def get_many(self) -> Sequence[ModelType]:
