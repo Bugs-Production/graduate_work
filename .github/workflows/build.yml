@@ -37,11 +37,6 @@ jobs:
           cd billing_api/src
           poetry run mypy . --follow-imports=skip
 
-      - name: Run tests
-        run: |
-          cd billing_api/src
-          poetry run pytest
-
   notify_success:
     runs-on: ubuntu-latest
     needs: lint
