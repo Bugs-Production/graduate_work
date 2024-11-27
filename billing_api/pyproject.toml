@@ -95,6 +95,8 @@ ignore = [
     "B008",
     # Standard pseudo-random generators are not suitable for cryptographic purposes
     "S311",
+    # assert detected
+    "S101"
 ]
 
 [tool.ruff.lint.mccabe]
@@ -114,3 +116,11 @@ warn_redundant_casts = true
 strict_optional = true
 explicit_package_bases = true
 mypy_path = "src"
+
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Please use `import python_multipart` instead",
+    "ignore:Support for class-based `config` is deprecated, use ConfigDict instead",
+
+]
