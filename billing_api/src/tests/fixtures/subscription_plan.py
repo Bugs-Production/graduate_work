@@ -10,9 +10,8 @@ from models.models import SubscriptionPlan
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def random_subscription_plans(test_session: AsyncSession):
-    subscription_plans = []
-    for i in range(10):
-        plan = SubscriptionPlan(
+    subscription_plans = [
+        SubscriptionPlan(
             id=uuid.uuid4(),
             title=f"Test Plan {i + 1}",
             description=f"This is a description for test plan {i + 1}",
@@ -21,7 +20,8 @@ async def random_subscription_plans(test_session: AsyncSession):
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        subscription_plans.append(plan)
+        for i in range(10)
+    ]
     test_session.add_all(subscription_plans)
     await test_session.commit()
     return subscription_plans
