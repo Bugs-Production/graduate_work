@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 import stripe
+from stripe.api_resources.abstract.createable_api_resource import CreateableAPIResource
 
 from core.config import settings
 
@@ -75,7 +76,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         customer_id: str | None = None,
         payment_method: str | None = None,
         description: str | None = None,
-    ) -> dict:
+    ) -> CreateableAPIResource | None:
         """
         Создание платежа.
 
@@ -100,9 +101,15 @@ class PaymentProcessorStripe(BasePaymentProcessor):
 
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
+            return None
 
-    def cancel_payment_intent(self, payment_intent_id: str):
+    def cancel_payment_intent(self, payment_intent_id: str) -> bool:
         """
         Реализация отмены PaymentIntent.
         """
-        return stripe.PaymentIntent.cancel(payment_intent_id)
+        try:
+            response = stripe.PaymentIntent.cancel(payment_intent_id)
+            return bool(hasattr(response, "id"))
+        except stripe.error.StripeError as e:
+            logger.warning(f"Stripe error: {e}")
+            return False
