@@ -108,7 +108,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         Реализация отмены PaymentIntent.
         """
         try:
-            response = stripe.PaymentIntent.cancel(payment_intent_id)
+            response = stripe.PaymentIntent.cancel(payment_intent_id) # type: ignore
             return bool(hasattr(response, "id"))
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
