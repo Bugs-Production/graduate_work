@@ -8,11 +8,24 @@ from core.config import settings
 from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
+from services.payment_process import PaymentProcessorStripe
 
 stripe.api_key = settings.stripe_api_key
 
 router = APIRouter()
 
+
+@router.get(
+    "/test/",
+    summary="test",
+    description="test",
+)
+async def get_add_card_form():
+    p = PaymentProcessorStripe()
+    await p.process_payment(
+        amount=150,
+        currency="usd",
+    )
 
 @router.get(
     "/get-card-form/",
