@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
 from uuid import UUID
 
 import stripe
@@ -31,7 +32,7 @@ class BasePaymentProcessor(ABC):
         customer_id: str | None = None,
         payment_method: str | None = None,
         description: str | None = None,
-    ) -> dict:
+    ) -> Any:
         """Инициализирует оплату"""
         pass
 
