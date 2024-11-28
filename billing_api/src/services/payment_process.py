@@ -98,7 +98,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
                 stripe_args["off_session"] = True
                 stripe_args["confirm"] = True
 
-            return stripe.PaymentIntent.create(**stripe_args)  # type: ignore
+            return stripe.PaymentIntent.create(**stripe_args)
 
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
