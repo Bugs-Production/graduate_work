@@ -4,22 +4,28 @@ from typing import Any
 from uuid import UUID
 
 import stripe
+from pydantic import BaseModel, field_validator
 from stripe.api_resources.payment_intent import PaymentIntent
-from typing import TypedDict
 
 from core.config import settings
 
 logger = logging.getLogger("billing")
 
 
-class PaymentIntentParams(TypedDict, total=False):
+class PaymentIntentParams(BaseModel):
     amount: int
     currency: str
     customer: str | None
     payment_method: str | None
     description: str | None
-    confirm: bool | None
-    off_session: bool | None
+    confirm: bool = False
+    off_session: bool = False
+
+    @field_validator("amount")
+    def check_amount(cls, value):
+        if value < 0:
+            raise ValueError("The amount cannot be less than zero!")
+        return value
 
 
 class BasePaymentProcessor(ABC):
@@ -99,29 +105,35 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         :param description: Описание платежа.
         """
         try:
-            stripe_args: PaymentIntentParams = {"amount": amount, "currency": currency, "description": description}
-
-            if customer_id:
-                stripe_args["customer"] = customer_id
+            stripe_args = PaymentIntentParams(
+                amount=amount,
+                currency=currency,
+                description=description,
+                customer=customer_id,
+                payment_method=payment_method,
+            )
 
             if payment_method:
-                stripe_args["payment_method"] = payment_method
-                stripe_args["off_session"] = True
-                stripe_args["confirm"] = True
+                stripe_args.off_session = True
+                stripe_args.confirm = True
 
-            return stripe.PaymentIntent.create(**stripe_args)
+            return await stripe.PaymentIntent.create_async(**stripe_args.model_dump())  # type: ignore[attr-defined]
+
+        except ValueError as e:
+            logger.warning(f"Value error: {e}")
 
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
-            return None
 
-    def cancel_payment_intent(self, payment_intent_id: str) -> bool:
+        return None
+
+    async def cancel_payment_intent(self, payment_intent_id: str) -> bool:
         """
         Реализация отмены PaymentIntent.
         """
         try:
-            payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-            response = stripe.PaymentIntent.cancel(payment_intent)
+            payment_intent = await stripe.PaymentIntent.retrieve_async(payment_intent_id)  # type: ignore[attr-defined]
+            response = await stripe.PaymentIntent.cancel_async(payment_intent)  # type: ignore[attr-defined]
             return bool(hasattr(response, "id"))
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
