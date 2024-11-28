@@ -27,6 +27,7 @@ async def get_add_card_form():
         currency="usd",
     )
 
+
 @router.get(
     "/get-card-form/",
     summary="Получение формы добавления карты",
