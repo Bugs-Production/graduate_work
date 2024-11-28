@@ -4,7 +4,7 @@ from typing import Any
 from uuid import UUID
 
 import stripe
-from stripe.api_resources.abstract.createable_api_resource import CreateableAPIResource
+from stripe.api_resources.payment_intent import PaymentIntent
 
 from core.config import settings
 
@@ -77,7 +77,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         customer_id: str | None = None,
         payment_method: str | None = None,
         description: str | None = None,
-    ) -> CreateableAPIResource | None:
+    ) -> PaymentIntent | None:
         """
         Создание платежа.
 
