@@ -5,10 +5,21 @@ from uuid import UUID
 
 import stripe
 from stripe.api_resources.payment_intent import PaymentIntent
+from typing import TypedDict
 
 from core.config import settings
 
 logger = logging.getLogger("billing")
+
+
+class PaymentIntentParams(TypedDict, total=False):
+    amount: int
+    currency: str
+    customer: str | None
+    payment_method: str | None
+    description: str | None
+    confirm: bool | None
+    off_session: bool | None
 
 
 class BasePaymentProcessor(ABC):
@@ -88,7 +99,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         :param description: Описание платежа.
         """
         try:
-            stripe_args = {"amount": amount, "currency": currency, "description": description}
+            stripe_args: PaymentIntentParams = {"amount": amount, "currency": currency, "description": description}
 
             if customer_id:
                 stripe_args["customer"] = customer_id
