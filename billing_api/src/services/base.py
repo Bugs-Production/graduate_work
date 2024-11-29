@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from typing import Generic, TypeVar
 from uuid import UUID
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +43,7 @@ class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaTy
         self._session = session
 
     async def create(self, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
+        obj_in_data = obj_in.model_dump(exclude_none=True, exclude_unset=True)
         entity = self._model(**obj_in_data)
         self._session.add(entity)
         await self._session.commit()
@@ -59,7 +58,7 @@ class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaTy
     async def get(self, entity_id: UUID) -> ModelType:
         db_obj = await self.get_one_or_none(entity_id=entity_id)
         if not db_obj:
-            raise ObjectNotFoundError(f"Запрашиваемый объект с id={entity_id} не найден")
+            raise ObjectNotFoundError(f"Запрашиваемый объект {self._model.__name__} с id={entity_id} не найден")
         return db_obj
 
     async def get_many(self) -> Sequence[ModelType]:

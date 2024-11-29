@@ -19,11 +19,28 @@ class TransactionNotFoundError(Exception):
     pass
 
 
+class BadRequestError(HTTPException):
+    def __init__(self, detail: str):
+        super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=detail)
+
+
 class ObjectNotFoundError(HTTPException):
     def __init__(self, detail: str):
         super().__init__(status_code=HTTPStatus.NOT_FOUND, detail=detail)
 
 
-class ObjectAlreadyExistsError(HTTPException):
+class ObjectAlreadyExistsError(BadRequestError):
+    pass
+
+
+class ActiveSubscriptionExsistsError(BadRequestError):
+    pass
+
+
+class AccessDeniedError(HTTPException):
     def __init__(self, detail: str):
-        super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=detail)
+        super().__init__(status_code=HTTPStatus.FORBIDDEN, detail=detail)
+
+
+class SubscriptionCancelError(BadRequestError):
+    pass
