@@ -20,6 +20,7 @@ class PaymentIntentParams(BaseModel):
     description: str | None
     confirm: bool = False
     off_session: bool = False
+    metadata: dict | None
 
     @field_validator("amount")
     def check_amount(cls, value):
@@ -49,6 +50,7 @@ class BasePaymentProcessor(ABC):
         customer_id: str | None = None,
         payment_method: str | None = None,
         description: str | None = None,
+        metadata: dict | None = None,
     ) -> Any:
         """Инициализирует оплату"""
         pass
@@ -94,6 +96,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         customer_id: str | None = None,
         payment_method: str | None = None,
         description: str | None = None,
+        metadata: dict | None = None,
     ) -> PaymentIntent | None:
         """
         Создание платежа.
@@ -103,6 +106,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         :param customer_id: ID клиента в Stripe.
         :param payment_method: ID метода оплаты Stripe.
         :param description: Описание платежа.
+        :param metadata: Метаданные, содержащие детали платежа.
         """
         try:
             stripe_args = PaymentIntentParams(
@@ -111,6 +115,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
                 description=description,
                 customer=customer_id,
                 payment_method=payment_method,
+                metadata=metadata,
             )
 
             if payment_method:
