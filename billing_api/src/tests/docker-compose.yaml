@@ -1,0 +1,8 @@
+services:
+  test_postgres:
+    image: postgres:16
+    container_name: test_postgres_billing
+    restart: always
+    ports:
+      - "${DB_PORT}:5432"
+    env_file: ./.env

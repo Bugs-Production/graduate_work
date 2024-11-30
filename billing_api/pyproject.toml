@@ -27,6 +27,11 @@ mypy = "1.13.0"
 pre-commit = "^4.0.1"
 types-stripe = "^3.5.2.20240106"
 
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pytest-asyncio = "^0.24.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -90,6 +95,8 @@ ignore = [
     "B008",
     # Standard pseudo-random generators are not suitable for cryptographic purposes
     "S311",
+    # assert detected
+    "S101"
 ]
 
 [tool.ruff.lint.mccabe]
@@ -109,3 +116,12 @@ warn_redundant_casts = true
 strict_optional = true
 explicit_package_bases = true
 mypy_path = "src"
+
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+filterwarnings = [
+    "ignore:Please use `import python_multipart` instead",
+    "ignore:Support for class-based `config` is deprecated, use ConfigDict instead",
+
+]
