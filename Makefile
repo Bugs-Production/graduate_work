@@ -37,3 +37,7 @@ tests:
 .PHONY: up_test_db
 up_test_db:
 	cd billing_api/src/tests ; docker-compose up -d
+
+.PHONY: start_rabbit
+start_rabbit:
+	docker run -d --name rabbitmq -p 15672:15672 -p 5672:5672 -e RABBITMQ_DEFAULT_USER=user -e RABBITMQ_DEFAULT_PASS=password rabbitmq:4.0.4-management
