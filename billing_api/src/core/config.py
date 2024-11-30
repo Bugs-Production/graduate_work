@@ -6,6 +6,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from core.logger import LOGGING
 
 
+class RabbitMQSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", env_prefix="RABBITMQ_"
+    )
+    host: str
+    port: int
+    user: str
+    password: str
+
+    @property
+    def url(self):
+        return f"amqp://{self.user}:{self.password}@{self.host}:{self.port}"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -19,6 +33,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field("my_jwt_algorithm", alias="JWT_ALGORITHM")
     stripe_publishable_key: str = Field("stripe_publishable_key", alias="STRIPE_PUBLISHABLE_KEY")
     stripe_api_key: str = Field("stripe_secret_key", alias="STRIPE_API_KEY")
+
+    rabbitmq: RabbitMQSettings = RabbitMQSettings()  # type:ignore[call-arg]
 
 
 logging_config.dictConfig(LOGGING)
