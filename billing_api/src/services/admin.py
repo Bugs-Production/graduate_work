@@ -15,9 +15,11 @@ class AdminTransactionService:
     def __init__(self, postgres_session: AsyncSession):
         self.postgres_session = postgres_session
 
-    async def get_transaction_by_id(self, transaction_id: str) -> Transaction:
+    async def get_transaction_by_id(self, transaction_id: UUID, user_id: UUID) -> Transaction:
         async with self.postgres_session() as session:
-            notifications_data = await session.scalars(select(Transaction).filter_by(id=transaction_id))
+            notifications_data = await session.scalars(
+                select(Transaction).filter_by(id=str(transaction_id), user_id=str(user_id))
+            )
             notification = notifications_data.first()
 
             if notification is None:
