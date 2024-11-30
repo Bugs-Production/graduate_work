@@ -35,3 +35,7 @@ async def init_rabbitmq(connection: AbstractRobustConnection) -> AbstractExchang
 
 async def close_rabbitmq_connection(connection: AbstractRobustConnection) -> None:
     await connection.close()
+
+
+async def get_rabbitmq_exchange() -> AbstractExchange | None:
+    return exchange
