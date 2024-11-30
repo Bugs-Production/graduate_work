@@ -3,6 +3,8 @@ import enum
 import aio_pika
 from aio_pika.abc import AbstractExchange, AbstractRobustConnection
 
+from core.config import settings
+
 connection: AbstractRobustConnection | None = None
 exchange: AbstractExchange | None = None
 
@@ -12,7 +14,6 @@ class QueueName(str, enum.Enum):
     NOTIFICATION = "notification_events"
 
 
-# TODO: backoff
 async def create_rabbitmq_connection(rabbitmq_url: str) -> AbstractRobustConnection:
     return await aio_pika.connect_robust(rabbitmq_url)
 
@@ -20,7 +21,7 @@ async def create_rabbitmq_connection(rabbitmq_url: str) -> AbstractRobustConnect
 async def init_rabbitmq(connection: AbstractRobustConnection) -> AbstractExchange:
     channel = await connection.channel()
     exchange = await channel.declare_exchange(
-        "billing_events",  # TODO: в настройки
+        settings.rabbitmq.exchange_name,
         aio_pika.ExchangeType.DIRECT,
         durable=True,
     )

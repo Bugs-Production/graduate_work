@@ -14,6 +14,7 @@ class RabbitMQSettings(BaseSettings):
     port: int
     user: str
     password: str
+    exchange_name: str = "billing_events"
 
     @property
     def url(self):
