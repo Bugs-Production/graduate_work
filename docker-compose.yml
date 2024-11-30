@@ -55,6 +55,26 @@ services:
       "listen --api-key ${STRIPE_API_KEY} --device-name ${STRIPE_DEVICE_NAME} --forward-to localhost:80/api/v1/billing/payment/webhook/"
     network_mode: host
 
+  rabbitmq:
+    image: rabbitmq:4.0.4-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "15672:15672"  # management
+      - ${RABBITMQ_PORT}:${RABBITMQ_PORT}
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    networks:
+      - billing_network
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 1s
+      timeout: 3s
+      retries: 20
+    env_file: billing_api/.env
+
+
 networks:
   billing_network:
 
