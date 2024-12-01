@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     postgres_password: str
     db_host: str
     db_port: int
+    jwt_secret_key: str
+    jwt_algorithm: str
 
     @property
     def test_postgres_url(self):

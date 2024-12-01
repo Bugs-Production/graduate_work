@@ -5,7 +5,7 @@ services:
       context: ./billing_api
     container_name: billing_api
     env_file:
-      - billing_api/.env
+      - billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -36,7 +36,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -50,7 +50,7 @@ services:
   stripe:
     image: "stripe/stripe-cli:latest"
     container_name: stripe-cli
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
     command:
       "listen --api-key ${STRIPE_API_KEY} --device-name ${STRIPE_DEVICE_NAME} --forward-to localhost:80/api/v1/billing/payment/webhook/"
     network_mode: host
