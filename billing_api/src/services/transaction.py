@@ -11,13 +11,15 @@ from models.models import Transaction
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
 
 
-class AdminTransactionService:
+class TransactionService:
     def __init__(self, postgres_session: AsyncSession):
         self.postgres_session = postgres_session
 
-    async def get_transaction_by_id(self, transaction_id: str) -> Transaction:
+    async def get_transaction_by_id(self, transaction_id: UUID, user_id: UUID) -> Transaction:
         async with self.postgres_session() as session:
-            notifications_data = await session.scalars(select(Transaction).filter_by(id=transaction_id))
+            notifications_data = await session.scalars(
+                select(Transaction).filter_by(id=str(transaction_id), user_id=str(user_id))
+            )
             notification = notifications_data.first()
 
             if notification is None:
@@ -45,5 +47,5 @@ class AdminTransactionService:
 @lru_cache
 def get_admin_transaction_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
-) -> AdminTransactionService:
-    return AdminTransactionService(postgres_session)
+) -> TransactionService:
+    return TransactionService(postgres_session)

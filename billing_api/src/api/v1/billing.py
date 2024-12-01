@@ -4,6 +4,7 @@ import stripe
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from api.jwt_access_token import AccessTokenPayload, security_jwt
 from core.config import settings
 from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
@@ -39,10 +40,9 @@ async def success_card(request: Request):
 )
 async def initialize_payment_method(
     manager_service: CardsManager = Depends(get_cards_manager_service),
+    token: AccessTokenPayload = Depends(security_jwt),
 ) -> RedirectResponse:
-    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
-
-    url = await manager_service.create_user_card(user_id=user_id)
+    url = await manager_service.create_user_card(user_id=token.user_id)
     return RedirectResponse(url, status_code=303)
 
 
@@ -89,12 +89,12 @@ async def stripe_webhook(
     },
 )
 async def set_default_card_user(
-    card_id: uuid.UUID, manager_service: CardsManager = Depends(get_cards_manager_service)
+    card_id: uuid.UUID,
+    manager_service: CardsManager = Depends(get_cards_manager_service),
+    token: AccessTokenPayload = Depends(security_jwt),
 ) -> JSONResponse:
-    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
-
     try:
-        success = await manager_service.set_default_card(user_id=str(user_id), card_id=str(card_id))
+        success = await manager_service.set_default_card(user_id=str(token.user_id), card_id=str(card_id))
         if success:
             return JSONResponse(content={"detail": "success"}, status_code=200)
         return JSONResponse(content={"detail": "Card is already set as default"}, status_code=400)
@@ -129,10 +129,11 @@ async def set_default_card_user(
         },
     },
 )
-async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_manager_service)) -> JSONResponse:
-    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
-
-    manager_response = await manager_service.get_all_user_cards(user_id=str(user_id))
+async def get_all_user_cards(
+    manager_service: CardsManager = Depends(get_cards_manager_service),
+    token: AccessTokenPayload = Depends(security_jwt),
+) -> JSONResponse:
+    manager_response = await manager_service.get_all_user_cards(user_id=str(token.user_id))
     if manager_response:
         return JSONResponse(content=manager_response, status_code=200)
     return JSONResponse(content={"detail": "User cards not found"}, status_code=404)
@@ -164,11 +165,10 @@ async def get_all_user_cards(manager_service: CardsManager = Depends(get_cards_m
 async def delete_card_user(
     card_id: uuid.UUID,
     manager_service: CardsManager = Depends(get_cards_manager_service),
+    token: AccessTokenPayload = Depends(security_jwt),
 ) -> JSONResponse:
-    user_id = "637987f8-e99d-4b00-b4ca-54e377c042e2"  # TODO: заменить на реальный айди юзера, полученный с токена auth
-
     try:
-        result_service = await manager_service.remove_card_from_user(card_id=card_id, user_id=str(user_id))
+        result_service = await manager_service.remove_card_from_user(card_id=card_id, user_id=str(token.user_id))
         if result_service:
             return JSONResponse(content={"detail": "success"}, status_code=200)
         return JSONResponse(content={"detail": "Sorry try again later"}, status_code=400)
