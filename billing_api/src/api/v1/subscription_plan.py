@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from fastapi_pagination import Page, paginate
 
-from api.jwt_access_token import require_admin
+from api.jwt_access_token import AccessTokenPayload, UserRole, require_admin, security_jwt
 from api.utils import generate_error_responses
 from schemas.subscription_plan import SubscriptionPlanCreate, SubscriptionPlanResponse, SubscriptionPlanUpdate
 from services.subscription_plan import SubscriptionPlanService, get_subscription_plan_service
@@ -22,8 +22,12 @@ router = APIRouter()
 )
 async def get_subscription_plans(
     subscription_plan_service: SubscriptionPlanService = Depends(get_subscription_plan_service),
+    token: AccessTokenPayload = Depends(security_jwt),
 ):
-    subscription_plans = await subscription_plan_service.get_many()
+    if token.role == UserRole.ADMIN:
+        subscription_plans = await subscription_plan_service.get_many()
+    else:
+        subscription_plans = await subscription_plan_service.get_many({"archive": False})
     return paginate(subscription_plans)
 
 
