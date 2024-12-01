@@ -1,7 +1,7 @@
 import enum
 from uuid import UUID
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -73,8 +73,8 @@ class JWTBearer(HTTPBearer):
 security_jwt = JWTBearer()
 
 
-def check_admin_only(access_token: AccessTokenPayload):
-    if access_token.role != UserRole.ADMIN.value:
+def require_admin(access_token: AccessTokenPayload = Depends(security_jwt)):
+    if access_token.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operation allowed only for admin users",
