@@ -44,10 +44,10 @@ class JWTBearer(HTTPBearer):
                 detail="Only Bearer token might be accepted",
             )
 
-        return self.decode_and_parse_token(credentials.credentials)
+        return await self.decode_and_parse_token(credentials.credentials)
 
     @staticmethod
-    def decode_and_parse_token(jwt_token: str) -> AccessTokenPayload:
+    async def decode_and_parse_token(jwt_token: str) -> AccessTokenPayload:
         try:
             decoded_token = jwt.decode(jwt_token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         except ExpiredSignatureError:
@@ -73,7 +73,7 @@ class JWTBearer(HTTPBearer):
 security_jwt = JWTBearer()
 
 
-def require_admin(access_token: AccessTokenPayload = Depends(security_jwt)):
+async def require_admin(access_token: AccessTokenPayload = Depends(security_jwt)):
     if access_token.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
