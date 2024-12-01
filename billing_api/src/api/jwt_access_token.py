@@ -1,3 +1,4 @@
+import enum
 from uuid import UUID
 
 from fastapi import HTTPException, Request, status
@@ -9,9 +10,19 @@ from pydantic import BaseModel, ValidationError
 from core.config import settings
 
 
+class UserRole(enum.Enum):
+    ADMIN = "admin"
+    BASIC_USER = "basic_user"
+    SUBSCRIBER = "subscriber"
+
+    @classmethod
+    def values(cls):
+        return [status.value for status in cls]
+
+
 class AccessTokenPayload(BaseModel):
     user_id: UUID
-    role: list[str]
+    role: UserRole
     iat: int
     exp: int
 
@@ -63,7 +74,7 @@ security_jwt = JWTBearer()
 
 
 def check_admin_only(access_token: AccessTokenPayload):
-    if "admin" not in access_token.role:
+    if access_token.role != UserRole.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operation allowed only for admin users",
