@@ -60,10 +60,11 @@ async def fill_test_data_to_db():
             plan = random.choice(subscription_plans)
             start_date = datetime.now()
             end_date = start_date + timedelta(days=plan.duration_days)
+            user_card = random.choice(user_cards)
 
             subscription = Subscription(
                 id=uuid.uuid4(),
-                user_id=uuid.uuid4(),
+                user_id=user_card.user_id,
                 plan_id=plan.id,
                 status=random.choice(list(SubscriptionStatus)),
                 start_date=start_date,

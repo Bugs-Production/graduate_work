@@ -36,4 +36,4 @@ tests:
 
 .PHONY: up_test_db
 up_test_db:
-	cd billing_api/src/tests ; docker-compose up -d
+	cd billing_api/src/tests ; docker compose up -d
