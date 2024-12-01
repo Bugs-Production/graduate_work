@@ -29,3 +29,11 @@ migrate:
 downgrade:
 	@read -p "Enter revision number: " MSG; \
 	 docker exec billing_api alembic downgrade "$$MSG"
+
+.PHONY: tests
+tests:
+	cd billing_api/src ; pytest -v -s
+
+.PHONY: up_test_db
+up_test_db:
+	cd billing_api/src/tests ; docker compose up -d

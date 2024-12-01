@@ -20,12 +20,19 @@ stripe = "^11.2.0"
 alembic-postgresql-enum = "^1.4.0"
 orjson = "^3.10.11"
 greenlet = "^3.1.1"
+python-jose = "3.3.0"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "0.7.4"
 mypy = "1.13.0"
 pre-commit = "^4.0.1"
 types-stripe = "^3.5.2.20240106"
+types-python-jose = "^3.3.4.20240106"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pytest-asyncio = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -90,6 +97,8 @@ ignore = [
     "B008",
     # Standard pseudo-random generators are not suitable for cryptographic purposes
     "S311",
+    # assert detected
+    "S101"
 ]
 
 [tool.ruff.lint.mccabe]
@@ -109,3 +118,12 @@ warn_redundant_casts = true
 strict_optional = true
 explicit_package_bases = true
 mypy_path = "src"
+
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+filterwarnings = [
+    "ignore:Please use `import python_multipart` instead",
+    "ignore:Support for class-based `config` is deprecated, use ConfigDict instead",
+
+]
