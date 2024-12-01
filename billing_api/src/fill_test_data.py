@@ -47,6 +47,7 @@ async def fill_test_data_to_db():
                 description=f"This is a description for test plan {i + 1}",
                 price=100 + i * 10,
                 duration_days=random.choice([1, 7, 30]),
+                archive=random.choice([True, False]),
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
             )
