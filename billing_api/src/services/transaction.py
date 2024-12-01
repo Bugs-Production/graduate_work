@@ -11,7 +11,7 @@ from models.models import Transaction
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
 
 
-class AdminTransactionService:
+class TransactionService:
     def __init__(self, postgres_session: AsyncSession):
         self.postgres_session = postgres_session
 
@@ -47,5 +47,5 @@ class AdminTransactionService:
 @lru_cache
 def get_admin_transaction_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
-) -> AdminTransactionService:
-    return AdminTransactionService(postgres_session)
+) -> TransactionService:
+    return TransactionService(postgres_session)
