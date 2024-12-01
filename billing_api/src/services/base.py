@@ -61,8 +61,15 @@ class SQLAlchemyRepository(AbstractRepository, Generic[ModelType, CreateSchemaTy
             raise ObjectNotFoundError(f"Запрашиваемый объект {self._model.__name__} с id={entity_id} не найден")
         return db_obj
 
-    async def get_many(self) -> Sequence[ModelType]:
+    async def get_many(self, filters: dict | None) -> Sequence[ModelType]:
         stmt = select(self._model)
+        if filters is None:
+            filters = {}
+
+        for column_name, filter_value in filters.items():
+            column = getattr(self._model, column_name)
+            stmt = stmt.where(column == filter_value)
+
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
