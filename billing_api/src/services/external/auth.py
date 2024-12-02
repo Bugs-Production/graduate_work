@@ -12,6 +12,8 @@ class UserRole(str, enum.Enum):
 
 
 class AuthService(BaseQueueService):
+    """Сервис для управления ролями пользователей через очередь сообщений."""
+
     def __init__(self, queue_name: str, exchange: AbstractExchange) -> None:
         super().__init__(queue_name, exchange)
 

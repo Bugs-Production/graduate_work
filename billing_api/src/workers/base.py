@@ -16,11 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class BaseQueueWorker(ABC):
+    """Базовый класс для воркеров, обрабатывающих сообщения из очереди и отправляющих запросы
+    к внешним сервсиам.
+    """
+
     def __init__(self, queue_name: str):
         self._queue_name = queue_name
         self._circuit_breaker = CircuitBreaker()
 
     async def process_message(self, message: AbstractIncomingMessage) -> None:
+        """Обрабатывает сообщение из очереди."""
         message_info = f"delivery_tag={message.delivery_tag}, timestamp={message.timestamp}"
 
         if not self._circuit_breaker.can_execute():
@@ -53,6 +58,7 @@ class BaseQueueWorker(ABC):
             )
 
     async def make_post_request(self, url: str, payload: dict) -> None:
+        """Делает http-запрос к внешнему сервису."""
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
@@ -80,6 +86,7 @@ class BaseQueueWorker(ABC):
 
 
 async def run_worker(worker_class: type[BaseQueueWorker], queue_name: str) -> None:
+    """Инициализирует и запускает воркер типа worker_class."""
     worker = worker_class(queue_name)
 
     connection = await rabbitmq.create_rabbitmq_connection(settings.rabbitmq.url)

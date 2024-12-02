@@ -8,12 +8,16 @@ from services.external.base import BaseQueueService
 
 
 class NotificationTopic(str, enum.Enum):
+    """Тема уведомления."""
+
     SUBSCRIPTION = "subscription"
     CARD = "card"
     TRANSACTION = "transaction"
 
 
 class NotificationService(BaseQueueService):
+    """Сервис для отправки уведомлений пользователям через очередь сообщений."""
+
     def __init__(self, queue_name: str, exchange: AbstractExchange) -> None:
         super().__init__(queue_name, exchange)
 

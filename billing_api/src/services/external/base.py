@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class BaseQueueService:
+    """Базовый класс для сервисов, работающих с очередью RabbitMQ."""
+
     def __init__(self, queue_name: str, exchange: AbstractExchange) -> None:
         self._queue_name = queue_name
         self._exchange = exchange

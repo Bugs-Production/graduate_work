@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class AuthWorker(BaseQueueWorker):
+    """Воркер для работы с сервисом Auth."""
+
     def __init__(self, queue_name: str):
         super().__init__(queue_name)
         self._auth_service_url = settings.auth_service_url.rstrip("/")
@@ -21,8 +23,4 @@ class AuthWorker(BaseQueueWorker):
             raise PermanentWorkerError("Неверная структура сообщения для обработки AuthWorker")
 
         url = f"{self._auth_service_url}/{user_id}/role/"
-        payload = {
-            "user_id": user_id,
-            "role": role,
-        }
-        await self.make_post_request(url, payload)
+        await self.make_post_request(url, payload={"role": role})
