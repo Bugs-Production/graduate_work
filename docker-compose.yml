@@ -74,6 +74,39 @@ services:
       retries: 20
     env_file: billing_api/.env
 
+  auth_worker:
+    build:
+      dockerfile: Dockerfile
+      context: ./billing_api
+    container_name: auth_worker
+    command: python src/run_auth_worker.py
+    env_file:
+      - billing_api/.env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/opt/app/src
+      - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      - rabbitmq
+
+  notification_worker:
+    build:
+      dockerfile: Dockerfile
+      context: ./billing_api
+    container_name: notification_worker
+    command: python src/run_notification_worker.py
+    env_file:
+      - billing_api/.env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/opt/app/src
+      - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      - rabbitmq
 
 networks:
   billing_network:
