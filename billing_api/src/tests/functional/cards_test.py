@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -163,5 +164,79 @@ class TestSetDefaultCard:
 
         response = await api_client.post(self.path.format(card.id), headers=access_token_user)
 
+        assert response.status_code == HTTPStatus.NOT_FOUND
+        assert response.json() == {"detail": "User card not found"}
+
+
+class TestDeleteCard:
+    def setup_method(self):
+        self.path = "/api/v1/billing/delete-card/?card_id={}"
+
+    @pytest.mark.asyncio(loop_scope="session")
+    @patch("services.payment_process.PaymentProcessorStripe.remove_card", new_callable=AsyncMock)
+    async def test_success_delete_card(
+        self, mock_remove_card, test_session, api_client, access_token_user, user_card
+    ) -> None:
+        """Успешное удаление карты."""
+        mock_remove_card.return_value = True
+
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+
+        result = await test_session.execute(select(UserCardsStripe))
+        cards = result.scalars().all()
+
+        assert len(cards) == 1
+
+        response = await api_client.delete(self.path.format(card.id), headers=access_token_user)
+        assert response.status_code == HTTPStatus.OK
+        assert response.json() == {"detail": "success"}
+
+        # проверяем что карта действительно удалилась
+        result = await test_session.execute(select(UserCardsStripe))
+        cards = result.scalars().all()
+
+        assert len(cards) == 0
+
+    @pytest.mark.asyncio(loop_scope="session")
+    @patch("services.payment_process.PaymentProcessorStripe.remove_card", new_callable=AsyncMock)
+    async def test_not_success_delete_card(
+        self, mock_remove_card, test_session, api_client, access_token_user, user_card
+    ) -> None:
+        """Проблемы на стороне Stripe."""
+        mock_remove_card.return_value = False
+
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+
+        result = await test_session.execute(select(UserCardsStripe))
+        cards = result.scalars().all()
+
+        assert len(cards) == 1
+
+        response = await api_client.delete(self.path.format(card.id), headers=access_token_user)
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert response.json() == {"detail": "Sorry try again later"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_not_success_for_another_user(
+        self, test_session, api_client, access_token_another_user, user_card
+    ) -> None:
+        """Только хозяин может удалить карту."""
+
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+
+        result = await test_session.execute(select(UserCardsStripe))
+        cards = result.scalars().all()
+
+        assert len(cards) == 1
+
+        response = await api_client.delete(self.path.format(card.id), headers=access_token_another_user)
+        assert response.status_code == HTTPStatus.FORBIDDEN
+        assert response.json() == {"detail": "Forbidden"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_delete_card_not_found(self, api_client, access_token_user, user_card) -> None:
+        """Карта не найдена."""
+
+        response = await api_client.delete(self.path.format(uuid4()), headers=access_token_user)
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert response.json() == {"detail": "User card not found"}
