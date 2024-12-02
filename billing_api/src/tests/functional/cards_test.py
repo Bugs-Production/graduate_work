@@ -16,10 +16,10 @@ class TestGetUserCards:
     async def test_get_success_cards_for_user(self, api_client, access_token_user, user_card) -> None:
         """Успешное получение карт юзера."""
         # создаем активную карту юзера
-        card = await user_card(StatusCardsEnum.SUCCESS)
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
 
         # создаем еще одну, но с неуспешным статусом
-        await user_card(StatusCardsEnum.FAIL)
+        await user_card(StatusCardsEnum.FAIL, False)
 
         response = await api_client.get(self.get_cards_path, headers=access_token_user)
         assert response.status_code == HTTPStatus.OK
@@ -97,3 +97,71 @@ class TestInitializePaymentMethod:
 
         assert response.status_code == HTTPStatus.FORBIDDEN
         assert response.json() == {"detail": "Not authenticated"}
+
+
+class TestSetDefaultCard:
+    def setup_method(self):
+        self.path = "/api/v1/billing/set-default-card/?card_id={}"
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_success_set_default_card(self, test_session, api_client, access_token_user, user_card) -> None:
+        """Успешное проставление дефолтной карты."""
+        # создаем карты
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+        card_2 = await user_card(StatusCardsEnum.SUCCESS, False)
+
+        response = await api_client.post(self.path.format(card_2.id), headers=access_token_user)
+
+        # проверяем успешность ответа
+        assert response.status_code == HTTPStatus.OK
+        assert response.json() == {"detail": "success"}
+
+        # обновляем данные
+        await test_session.refresh(card)
+        await test_session.refresh(card_2)
+
+        # проверяем что другая карта действительно стала дефолтной
+        assert not card.is_default
+        assert card_2.is_default
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_not_success_another_user(self, api_client, access_token_another_user, user_card) -> None:
+        """Проверка, что только хозяин может сделать карту дефолтной."""
+        # создаем карты
+        await user_card(StatusCardsEnum.SUCCESS, True)
+        card_2 = await user_card(StatusCardsEnum.SUCCESS, False)
+
+        response = await api_client.post(self.path.format(card_2.id), headers=access_token_another_user)
+
+        assert response.status_code == HTTPStatus.FORBIDDEN
+        assert response.json() == {"detail": "Forbidden"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_set_card_already_default(self, api_client, access_token_user, user_card) -> None:
+        """Карта уже является дефолтной."""
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+
+        response = await api_client.post(self.path.format(card.id), headers=access_token_user)
+
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert response.json() == {"detail": "Card is already set as default"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_set_default_card_for_anonymous_user(self, api_client, user_card) -> None:
+        """Доступ запрещен для анонимного юзера."""
+        card = await user_card(StatusCardsEnum.SUCCESS, True)
+
+        response = await api_client.post(self.path.format(card.id))
+
+        assert response.status_code == HTTPStatus.FORBIDDEN
+        assert response.json() == {"detail": "Not authenticated"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_set_default_not_found_card(self, api_client, access_token_user, user_card) -> None:
+        """Карта не найдена."""
+        card = await user_card(StatusCardsEnum.FAIL, True)
+
+        response = await api_client.post(self.path.format(card.id), headers=access_token_user)
+
+        assert response.status_code == HTTPStatus.NOT_FOUND
+        assert response.json() == {"detail": "User card not found"}
