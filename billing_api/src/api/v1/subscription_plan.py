@@ -18,7 +18,7 @@ router = APIRouter()
     summary="Вывести планы подписок",
     description="Вывести все существующие планы подписок с пагинацией",
     status_code=HTTPStatus.OK,
-    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR),  # type: ignore[reportArgumentType]
+    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
 )
 async def get_subscription_plans(
     subscription_plan_service: SubscriptionPlanService = Depends(get_subscription_plan_service),
@@ -37,7 +37,7 @@ async def get_subscription_plans(
     summary="Создать план подписки",
     description="Создание плана подписки",
     status_code=HTTPStatus.CREATED,
-    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR),  # type: ignore[reportArgumentType]
+    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
     dependencies=[Depends(require_admin)],
 )
 async def create_subscription_plan(
@@ -68,7 +68,9 @@ async def get_subscription_plan_by_id(
     summary="Обновить план подписки",
     description="Обновление данных выбранного плана подписки",
     status_code=HTTPStatus.OK,
-    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.NOT_FOUND),  # type: ignore[reportArgumentType]
+    responses=generate_error_responses(
+        HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.NOT_FOUND, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED
+    ),  # type: ignore[reportArgumentType]
     dependencies=[Depends(require_admin)],
 )
 async def update_subscription_plan(
