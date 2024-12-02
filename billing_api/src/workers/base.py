@@ -20,8 +20,10 @@ class BaseQueueWorker(ABC):
         self._circuit_breaker = CircuitBreaker()
 
     async def process_message(self, message: AbstractIncomingMessage) -> None:
+        message_info = f"delivery_tag={message.delivery_tag}, timestamp={message.timestamp}"
+
         if not self._circuit_breaker.can_execute():
-            logger.warning("Circuit Breaker открыт. Обработка сообщений остановлена")
+            logger.warning(f"Circuit Breaker открыт. Сообщение {message_info} не обработано.")
             return None
 
         try:
@@ -32,20 +34,20 @@ class BaseQueueWorker(ABC):
         except json.JSONDecodeError as err:
             await message.reject()
             logger.exception(
-                f"Невалидный JSON в сообщении {message.message_id}. Сообщение направлено в DLQ.",
+                f"Невалидный JSON в сообщении {message_info}. Сообщение направлено в DLQ.",
                 exc_info=err,
             )
         except PermanentWorkerError as err:
             await message.reject()
             logger.exception(
-                f"Неразрешимая ошибка обработки сообщения {message.message_id}. Сообщение направлено в DLQ.",
+                f"Неразрешимая ошибка обработки сообщения {message_info}. Сообщение направлено в DLQ.",
                 exc_info=err,
             )
         except TemporaryWorkerError as err:
             self._circuit_breaker.record_failure()
             await message.nack(requeue=True)
             logger.exception(
-                f"Ошибка обработки сообщения {message.message_id}. Сообщение возвращено для повторной обработки",
+                f"Ошибка обработки сообщения {message_info}. Сообщение возвращено для повторной обработки",
                 exc_info=err,
             )
 
@@ -68,8 +70,8 @@ async def run_worker(worker_class: type[BaseQueueWorker], queue_name: str) -> No
         await queue.consume(worker.process_message)
         await asyncio.Future()
     except AMQPError:
-        logger.exception("Ошибка RabbitMQ. AuthWorker будет остановлен.")
+        logger.exception(f"Ошибка RabbitMQ. {worker_class.__name__} будет остановлен.")
     except Exception:
-        logger.exception("Неожиданная ошибка при обработке сообщений воркером AuthWorker")
+        logger.exception(f"Неожиданная ошибка при обработке сообщений воркером {worker_class.__name__}")
     finally:
         await rabbitmq.close_rabbitmq_connection(connection)
