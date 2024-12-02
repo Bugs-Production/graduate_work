@@ -26,9 +26,28 @@ async def init_rabbitmq(connection: AbstractRobustConnection) -> AbstractExchang
         durable=True,
     )
 
+    # dead letter exchange
+    dlx_name = f"{settings.rabbitmq.exchange_name}_dlx"
+    dlx = await channel.declare_exchange(
+        dlx_name,
+        aio_pika.ExchangeType.DIRECT,
+        durable=True,
+    )
+
     for queue_name in QueueName:
-        queue = await channel.declare_queue(queue_name, durable=True)
-        await queue.bind(exchange=exchange, routing_key=queue_name)
+        dlq_queue_name = f"{queue_name.value}_dlq"
+
+        # main queue
+        queue = await channel.declare_queue(
+            queue_name,
+            durable=True,
+            arguments={"x-dead-letter-exchange": dlx_name, "x-dead-letter-routing-key": dlq_queue_name},
+        )
+        await queue.bind(exchange=exchange, routing_key=queue_name.value)
+
+        # dead letter queue
+        dlq = await channel.declare_queue(dlq_queue_name, durable=True)
+        await dlq.bind(exchange=dlx, routing_key=dlq_queue_name)
 
     return exchange
 
