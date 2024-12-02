@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_pagination import Page, paginate
 
 from api.jwt_access_token import AccessTokenPayload, security_jwt
-from api.v1.utils import transaction_filters_query_params
+from api.utils import transaction_query_params
 from schemas.admin import TransactionSchemaBaseResponse, TransactionSchemaResponse
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
 from services.transaction import TransactionService, get_admin_transaction_service
@@ -50,7 +50,7 @@ async def get_transaction(
 )
 async def get_user_transactions(
     subscription_id: UUID | None = None,
-    query_params: dict[str, str] = Depends(transaction_filters_query_params),
+    query_params: dict = Depends(transaction_query_params),
     token: AccessTokenPayload = Depends(security_jwt),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
 ) -> Page[TransactionSchemaBaseResponse]:
