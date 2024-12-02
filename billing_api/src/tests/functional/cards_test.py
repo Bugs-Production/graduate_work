@@ -234,9 +234,17 @@ class TestDeleteCard:
         assert response.json() == {"detail": "Forbidden"}
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_delete_card_not_found(self, api_client, access_token_user, user_card) -> None:
+    async def test_delete_card_not_found(self, api_client, access_token_user) -> None:
         """Карта не найдена."""
 
         response = await api_client.delete(self.path.format(uuid4()), headers=access_token_user)
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert response.json() == {"detail": "User card not found"}
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_delete_card_for_anonymous_user(self, api_client) -> None:
+        """Запрос от анонимного юзера."""
+
+        response = await api_client.delete(self.path.format(uuid4()))
+        assert response.status_code == HTTPStatus.FORBIDDEN
+        assert response.json() == {"detail": "Not authenticated"}
