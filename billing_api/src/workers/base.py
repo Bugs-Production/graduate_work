@@ -3,6 +3,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 
+import httpx
 from aio_pika.abc import AbstractIncomingMessage
 from aio_pika.exceptions import AMQPError
 
@@ -50,6 +51,28 @@ class BaseQueueWorker(ABC):
                 f"Ошибка обработки сообщения {message_info}. Сообщение возвращено для повторной обработки",
                 exc_info=err,
             )
+
+    async def make_post_request(self, url: str, payload: dict) -> None:
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers={"X-Service-Secret-Token": settings.secret_token}
+                )
+                response.raise_for_status()
+                self._circuit_breaker.record_success()
+                logger.info(f"Запрос к {url} с телом {payload} выполнен успешно.")
+            except httpx.HTTPStatusError as err:
+                if err.response.is_client_error:
+                    raise PermanentWorkerError(
+                        f"Ошибка клиента при выполнении запроса к {url} с телом {payload}"
+                    ) from err
+                self._circuit_breaker.record_failure()
+                raise TemporaryWorkerError(f"Ошибка сервера при выполнении запроса к {url} с телом {payload}") from err
+            except httpx.RequestError as err:
+                self._circuit_breaker.record_failure()
+                raise TemporaryWorkerError(
+                    f"Ошибка соединения при выполнении запроса к {url} с телом {payload}"
+                ) from err
 
     @abstractmethod
     async def handle_event(self, message_body: dict) -> None:

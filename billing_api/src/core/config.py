@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     stripe_publishable_key: str = Field("stripe_publishable_key", alias="STRIPE_PUBLISHABLE_KEY")
     stripe_api_key: str = Field("stripe_secret_key", alias="STRIPE_API_KEY")
 
+    secret_token: str = Field("super_secret_token", alias="SECRET_TOKEN")
+    auth_service_url: str = Field("http://localhost/api/v1/auth", alias="AUTH_SERVICE_URL")
+    notification_service_url: str = Field("http://localhost/api/v1/notitications", alias="NOTIFICATION_SERVICE_URL")
+
     rabbitmq: RabbitMQSettings = RabbitMQSettings()  # type:ignore[call-arg]
 
 
