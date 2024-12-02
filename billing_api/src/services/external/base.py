@@ -18,7 +18,7 @@ class BaseQueueService:
         try:
             message = Message(body=json.dumps(payload).encode(), delivery_mode=DeliveryMode.PERSISTENT)
             await self._exchange.publish(message=message, routing_key=self._queue_name)  # type: ignore[union-attr]
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
             logger.exception(f"Ошибка сериализации данных в JSON при публикации в очередь {self._queue_name}")
             return False
         except AMQPError:
