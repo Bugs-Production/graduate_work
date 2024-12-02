@@ -42,7 +42,7 @@ async def initialize_payment_method(
     manager_service: CardsManager = Depends(get_cards_manager_service),
     token: AccessTokenPayload = Depends(security_jwt),
 ) -> RedirectResponse:
-    url = await manager_service.creagte_user_card(user_id=token.user_id)
+    url = await manager_service.create_user_card(user_id=token.user_id)
     return RedirectResponse(url, status_code=303)
 
 
