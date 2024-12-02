@@ -54,7 +54,7 @@ async def test_create_subscription_plan_success(api_client: AsyncClient):
         "description": "Test description",
         "price": 1000,
         "duration_days": 30,
-        "archive": False,
+        "is_archive": False,
     }
 
     response = await api_client.post(SUBSCRIPTION_PLANS_ENDPOINT, json=plan_data)
@@ -65,7 +65,7 @@ async def test_create_subscription_plan_success(api_client: AsyncClient):
     assert data["description"] == plan_data["description"]
     assert data["price"] == plan_data["price"]
     assert data["duration_days"] == plan_data["duration_days"]
-    assert data["archive"] == plan_data["archive"]
+    assert data["is_archive"] == plan_data["is_archive"]
     assert "id" in data
 
 
@@ -124,7 +124,7 @@ async def test_get_subscription_plan_by_id_success(
     assert data["description"] == existing_plan.description
     assert data["price"] == existing_plan.price
     assert data["duration_days"] == existing_plan.duration_days
-    assert data["archive"] == existing_plan.archive
+    assert data["is_archive"] == existing_plan.is_archive
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -150,7 +150,7 @@ async def test_update_subscription_plan_success(
         "description": "Updated description",
         "price": 2000,
         "duration_days": 60,
-        "archive": True,
+        "is_archive": True,
     }
 
     response = await api_client.patch(f"{SUBSCRIPTION_PLANS_ENDPOINT}{existing_plan.id}", json=update_data)
@@ -162,7 +162,7 @@ async def test_update_subscription_plan_success(
     assert data["description"] == update_data["description"]
     assert data["price"] == update_data["price"]
     assert data["duration_days"] == update_data["duration_days"]
-    assert data["archive"] == update_data["archive"]
+    assert data["is_archive"] == update_data["is_archive"]
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -181,7 +181,7 @@ async def test_update_subscription_plan_partial(
     assert data["description"] == existing_plan.description
     assert data["price"] == update_data["price"]
     assert data["duration_days"] == update_data["duration_days"]
-    assert data["archive"] == existing_plan.archive
+    assert data["is_archive"] == existing_plan.is_archive
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -208,7 +208,7 @@ async def test_update_subscription_plan_not_found(api_client: AsyncClient):
 
 @pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
-    "invalid_payload", [{"price": -100}, {"duration_days": 0}, {"archive": 0}, {"title": ""}, {"description": ""}]
+    "invalid_payload", [{"price": -100}, {"duration_days": 0}, {"is_archive": 0}, {"title": ""}, {"description": ""}]
 )
 async def test_update_subscription_plan_invalid_data(
     api_client: AsyncClient, random_subscription_plans: list[SubscriptionPlan], invalid_payload: dict

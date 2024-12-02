@@ -27,7 +27,7 @@ async def get_subscription_plans(
     if token.role == UserRole.ADMIN:
         subscription_plans = await subscription_plan_service.get_many()
     else:
-        subscription_plans = await subscription_plan_service.get_many({"archive": False})
+        subscription_plans = await subscription_plan_service.get_many({"is_archive": False})
     return paginate(subscription_plans)
 
 
