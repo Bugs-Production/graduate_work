@@ -10,7 +10,7 @@ from starlette.staticfiles import StaticFiles
 
 from api.v1 import billing, subscription, subscription_plan, transaction
 from core.config import settings
-from db import postgres
+from db import postgres, rabbitmq
 
 # Для избежания варнингов для paginator в консоли
 disable_installed_extensions_check()
@@ -20,7 +20,12 @@ disable_installed_extensions_check()
 async def lifespan(app: FastAPI):
     postgres.engine = create_async_engine(postgres.dsn, echo=settings.engine_echo, future=True)
     postgres.async_session = async_sessionmaker(bind=postgres.engine, expire_on_commit=False, class_=AsyncSession)  # type: ignore[assignment]
+
+    rabbitmq.connection = await rabbitmq.create_rabbitmq_connection(settings.rabbitmq.url)
+    rabbitmq.exchange = await rabbitmq.init_rabbitmq(rabbitmq.connection)
+
     yield
+    await rabbitmq.close_rabbitmq_connection(rabbitmq.connection)
 
 
 app = FastAPI(

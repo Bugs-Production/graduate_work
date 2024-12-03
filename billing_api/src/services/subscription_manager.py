@@ -2,16 +2,19 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from uuid import UUID
 
+from aio_pika.abc import AbstractExchange
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgres import get_session
+from db.rabbitmq import QueueName, get_rabbitmq_exchange
 from models.enums import SubscriptionStatus
 from models.models import Subscription
 from schemas.subscription import SubscriptionCreate, SubscriptionCreateFull, SubscriptionRenew, SubscriptionUpdate
 from services.base import SQLAlchemyRepository
 from services.exceptions import AccessDeniedError, ActiveSubscriptionExsistsError, SubscriptionCancelError
+from services.external import AuthService, NotificationService
 from services.subscription_plan import SubscriptionPlanService
 
 
@@ -20,9 +23,17 @@ class SubscriptionManager(SQLAlchemyRepository[Subscription, SubscriptionCreateF
     # TODO: обработка ответа от платёжной системы (вебхука)
     # TODO: изменение роли пользователя
     # TODO: нотификации пользователю
-    def __init__(self, session: AsyncSession, subscription_plan_service: SubscriptionPlanService):
+    def __init__(
+        self,
+        session: AsyncSession,
+        subscription_plan_service: SubscriptionPlanService,
+        auth_service: AuthService,
+        notification_service: NotificationService,
+    ):
         super().__init__(model=Subscription, session=session)
         self._subscription_plan_service = subscription_plan_service
+        self._auth_service = auth_service
+        self._notification_service = notification_service
 
     async def create_subscription(self, user_id: UUID, subscription_data: SubscriptionCreate) -> Subscription:
         """Создаёт новую подписку для пользователя."""
@@ -56,7 +67,10 @@ class SubscriptionManager(SQLAlchemyRepository[Subscription, SubscriptionCreateF
         update_data = SubscriptionUpdate(
             status=SubscriptionStatus.CANCELLED, auto_renewal=False, end_date=datetime.now()
         )
-        return await self.update(subscription_id, update_data)
+        result = await self.update(subscription_id, update_data)
+        await self._auth_service.downgrade_user_to_basic(user_id)
+        await self._notification_service.notify_user_subscription_status(user_id, SubscriptionStatus.CANCELLED)
+        return result
 
     async def toggle_auto_renewal(self, user_id: UUID, subscription_id: UUID) -> Subscription:
         """Переключает режим автоматического продления подписки.
@@ -106,6 +120,15 @@ class SubscriptionManager(SQLAlchemyRepository[Subscription, SubscriptionCreateF
 
 
 @lru_cache
-def get_subscription_manager(session: AsyncSession = Depends(get_session)):
+def get_subscription_manager(
+    session: AsyncSession = Depends(get_session), exchange: AbstractExchange = Depends(get_rabbitmq_exchange)
+):
     subscription_plan_service = SubscriptionPlanService(session)
-    return SubscriptionManager(session=session, subscription_plan_service=subscription_plan_service)
+    auth_service = AuthService(QueueName.AUTH, exchange)
+    notification_service = NotificationService(QueueName.NOTIFICATION, exchange)
+    return SubscriptionManager(
+        session=session,
+        subscription_plan_service=subscription_plan_service,
+        auth_service=auth_service,
+        notification_service=notification_service,
+    )
