@@ -32,7 +32,7 @@ async def get_subscription_by_id(
     "/",
     response_model=Page[SubscriptionResponse],
     summary="Вывести все подписки",
-    description="Админ может просмотреть все подписки, пользователь только свои.",
+    description="Вывести все подписки с пагинацией и фильтрацией по полям",
     status_code=HTTPStatus.OK,
     responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
 )

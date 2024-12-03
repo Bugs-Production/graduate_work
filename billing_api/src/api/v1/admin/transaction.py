@@ -33,7 +33,7 @@ async def get_transaction_by_id(
     "/",
     response_model=Page[TransactionSchemaBaseResponse],
     summary="Вывести транзакции",
-    description="Вывести транзакции, возможно отфильтровать по параметрам",
+    description="Вывести транзакции с пагинацией и фильтрацией по полям",
     responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
 )
 async def get_transactions(
