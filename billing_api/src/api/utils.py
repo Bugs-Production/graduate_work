@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel
 
-from models.enums import PaymentType, TransactionStatus
+from models.enums import PaymentType, SubscriptionStatus, TransactionStatus
 
 
 class ErrorResponse(BaseModel):
@@ -29,4 +29,13 @@ def transaction_query_params(
     payment_type: Annotated[PaymentType | None, Query()] = None,
 ) -> dict[str, TransactionStatus | PaymentType]:
     query_params = {"subscription_id": subscription_id, "status": status, "payment_type": payment_type}
+    return {k: v for k, v in query_params.items() if v is not None}
+
+
+def subscription_query_params(
+    status: Annotated[SubscriptionStatus | None, Query()] = None,
+    plan_id: Annotated[UUID | None, Query()] = None,
+    auto_renewal: Annotated[bool | None, Query()] = None,
+) -> dict[str, TransactionStatus | PaymentType]:
+    query_params = {"status": status, "plan_id": plan_id, "auto_renewal": auto_renewal}
     return {k: v for k, v in query_params.items() if v is not None}
