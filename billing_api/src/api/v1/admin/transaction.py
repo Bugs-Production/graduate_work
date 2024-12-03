@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page, paginate
 
-from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, transaction_query_params
 from schemas.admin import TransactionSchemaBaseResponse, TransactionSchemaResponse
 from services.exceptions import TransactionNotFoundError
@@ -22,11 +21,10 @@ router = APIRouter()
 )
 async def get_transaction_by_id(
     transaction_id: UUID,
-    token: AccessTokenPayload = Depends(security_jwt),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
 ) -> Page[TransactionSchemaResponse]:
     try:
-        return await transaction_service.get_user_transaction_by_id(transaction_id, token.user_id)
+        return await transaction_service.get_transaction_by_id(transaction_id)
     except TransactionNotFoundError as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from None
 
@@ -35,16 +33,13 @@ async def get_transaction_by_id(
     "/",
     response_model=Page[TransactionSchemaBaseResponse],
     summary="Вывести транзакции",
-    description="Вывести транзакции пользователя с пагинацией и фильтрацией по полям",
+    description="Вывести транзакции с пагинацией и фильтрацией по полям",
     responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
 )
 async def get_transactions(
     query_params: dict = Depends(transaction_query_params),
-    token: AccessTokenPayload = Depends(security_jwt),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
 ) -> Page[TransactionSchemaBaseResponse]:
-    query_params.update({"user_id": token.user_id})
-
     transactions_list = await transaction_service.get_transactions(query_params)
 
     if not transactions_list:
