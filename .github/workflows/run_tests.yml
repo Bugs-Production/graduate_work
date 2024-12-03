@@ -15,7 +15,7 @@ env:
 jobs:
   run_tests:
     name: Run Tests
-    runs-on: ubunt-latest
+    runs-on: ubuntu-latest
 
     services:
       postgres:
