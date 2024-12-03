@@ -11,11 +11,11 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgres import get_postgres_session
 from sqlalchemy import select
-from models.models import Transaction, UserCardsStripe
+from models.models import Transaction, UserCardsStripe, Subscription
 from services.transaction import TransactionService, get_admin_transaction_service
 from uuid import UUID
-from models.enums import PaymentType
-from services.exceptions import CardNotFoundException
+from models.enums import PaymentType, SubscriptionStatus, TransactionStatus
+from services.exceptions import CardNotFoundException, CreatePaymentIntentException
 
 from core.config import settings
 
@@ -54,13 +54,13 @@ class BasePaymentProcessor(ABC):
 
     @abstractmethod
     async def process_payment(
-            self,
-            amount: int,
-            currency: str,
-            customer_id: str | None = None,
-            payment_method: str | None = None,
-            description: str | None = None,
-            metadata: dict | None = None,
+        self,
+        amount: int,
+        currency: str,
+        customer_id: str | None = None,
+        payment_method: str | None = None,
+        description: str | None = None,
+        metadata: dict | None = None,
     ) -> Any:
         """Инициализирует оплату"""
         pass
@@ -89,8 +89,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
     async def remove_card(self, token_card: str) -> bool:
         """Запрос на удаление карты у юзера."""
         try:
-            response = await stripe.PaymentMethod.detach_async(
-                payment_method=token_card)  # type: ignore[attr-defined]
+            response = await stripe.PaymentMethod.detach_async(payment_method=token_card)  # type: ignore[attr-defined]
             # если у response есть id карты, считаем, что запрос прошел успешно
             return bool(hasattr(response, "id"))
         except stripe.error.APIError as e:
@@ -101,13 +100,13 @@ class PaymentProcessorStripe(BasePaymentProcessor):
             return False
 
     async def process_payment(
-            self,
-            amount: int,
-            currency: str,
-            customer_id: str | None = None,
-            payment_method: str | None = None,
-            description: str | None = None,
-            metadata: dict | None = None,
+        self,
+        amount: int,
+        currency: str,
+        customer_id: str | None = None,
+        payment_method: str | None = None,
+        description: str | None = None,
+        metadata: dict | None = None,
     ) -> PaymentIntent | None:
         """
         Создание платежа.
@@ -136,10 +135,10 @@ class PaymentProcessorStripe(BasePaymentProcessor):
             return await stripe.PaymentIntent.create_async(**stripe_args.model_dump())
 
         except ValueError as e:
-            logger.warning(f"Value error: {e}")
+            logger.warning(f"Value error: {e}\nCustomer_id: {e}\nPayment_method: {e}")
 
         except stripe.error.StripeError as e:
-            logger.warning(f"Stripe error: {e}")
+            logger.warning(f"Stripe error: {e}\nCustomer_id: {e}\nPayment_method: {e}")
 
         return None
 
@@ -148,10 +147,8 @@ class PaymentProcessorStripe(BasePaymentProcessor):
         Реализация отмены PaymentIntent.
         """
         try:
-            payment_intent = await stripe.PaymentIntent.retrieve_async(
-                payment_intent_id)  # type: ignore[attr-defined]
-            response = await stripe.PaymentIntent.cancel_async(
-                payment_intent)  # type: ignore[attr-defined]
+            payment_intent = await stripe.PaymentIntent.retrieve_async(payment_intent_id)  # type: ignore[attr-defined]
+            response = await stripe.PaymentIntent.cancel_async(payment_intent)  # type: ignore[attr-defined]
             return bool(hasattr(response, "id"))
         except stripe.error.StripeError as e:
             logger.warning(f"Stripe error: {e}")
@@ -160,10 +157,10 @@ class PaymentProcessorStripe(BasePaymentProcessor):
 
 class PaymentManager:
     def __init__(
-            self,
-            postgres_session: AsyncSession,
-            payment_processor: PaymentProcessorStripe,
-            transaction_service: TransactionService,
+        self,
+        postgres_session: AsyncSession,
+        payment_processor: PaymentProcessorStripe,
+        transaction_service: TransactionService,
     ):
         self.postgres_session = postgres_session
         self.payment_processor = payment_processor
@@ -171,8 +168,7 @@ class PaymentManager:
 
     async def _get_stripe_card_data(self, card_id, user_id):
         async with self.postgres_session() as session:
-            cards_data = await session.scalars(
-                select(UserCardsStripe).filter_by(id=str(card_id), user_id=str(user_id)))
+            cards_data = await session.scalars(select(UserCardsStripe).filter_by(id=str(card_id), user_id=str(user_id)))
             stripe_card = cards_data.first()
 
             if stripe_card is None:
@@ -181,13 +177,13 @@ class PaymentManager:
             return stripe_card
 
     async def process_payment_with_card(
-            self,
-            amount: int,
-            currency: str,
-            subscription_id: UUID,
-            user_id: UUID,
-            card_id: UUID,
-            description: str | None = None,
+        self,
+        amount: int,
+        currency: str,
+        subscription_id: UUID,
+        user_id: UUID,
+        card_id: UUID,
+        description: str | None = None,
     ) -> Transaction:
         payment_meta = {
             "subscription_id": subscription_id,
@@ -213,13 +209,14 @@ class PaymentManager:
             metadata=payment_meta,
         )
 
-        logger.info(f"process_payment create payment intent: {payment_intent}")
+        if not payment_intent:
+            raise CreatePaymentIntentException("Failure to create a payment intent")
 
-        if payment_intent:
-            transaction.stripe_payment_intent_id = payment_intent["id"]
-            async with self.postgres_session() as session:
-                session.add(transaction)
-                await session.commit()
+        transaction.stripe_payment_intent_id = payment_intent["id"]
+
+        async with self.postgres_session() as session:
+            session.add(transaction)
+            await session.commit()
 
         return transaction
 
@@ -231,10 +228,23 @@ class PaymentWebhookManager:
 
     async def handle_payment_succeeded(self, data):
         logger.info(f"Payment event: {data}")
+
         stripe_obj = data["object"]
         subscription_id = stripe_obj["metadata"].get("subscription_id")
+
         if subscription_id:
-            pass
+            async with self.postgres_session() as session:
+                transaction_data = await session.scalars(select(Transaction).filter_by(subscription_id=subscription_id))
+                transaction = transaction_data.first()
+                transaction.status = TransactionStatus.SUCCESS
+                session.add(transaction)
+
+                subscription_data = await session.scalars(select(Subscription).filter_by(id=subscription_id))
+                subscription = subscription_data.first()
+                subscription.status = SubscriptionStatus.ACTIVE
+                session.add(subscription)
+
+                await session.commit()
 
     async def handle_payment_failed(self, data):
         logger.info(f"Payment event: {data}")
@@ -242,16 +252,16 @@ class PaymentWebhookManager:
 
 @lru_cache
 def get_payment_webhook_manager_service(
-        postgres_session: AsyncSession = Depends(get_postgres_session),
-        payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
+    postgres_session: AsyncSession = Depends(get_postgres_session),
+    payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
 ) -> PaymentWebhookManager:
     return PaymentWebhookManager(postgres_session, payment_processor)
 
 
 @lru_cache
 def get_payment_manager_service(
-        postgres_session: AsyncSession = Depends(get_postgres_session),
-        payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
-        transaction_service: TransactionService = Depends(get_admin_transaction_service),
+    postgres_session: AsyncSession = Depends(get_postgres_session),
+    payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
+    transaction_service: TransactionService = Depends(get_admin_transaction_service),
 ) -> PaymentManager:
     return PaymentManager(postgres_session, payment_processor, transaction_service)
