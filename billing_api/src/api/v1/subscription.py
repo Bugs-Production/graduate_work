@@ -36,8 +36,7 @@ async def get_subscription_by_id(
     summary="Вывести все подписки",
     description="Админ может просмотреть все подписки, пользователь только свои.",
     status_code=HTTPStatus.OK,
-    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),
-    # type: ignore[reportArgumentType]
+    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
 )
 async def get_subscriptions(
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
