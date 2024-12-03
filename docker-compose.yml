@@ -5,7 +5,7 @@ services:
       context: ./billing_api
     container_name: billing_api
     env_file:
-      - billing_api/.env
+      - billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -36,7 +36,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -50,10 +50,63 @@ services:
   stripe:
     image: "stripe/stripe-cli:latest"
     container_name: stripe-cli
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
     command:
       "listen --api-key ${STRIPE_API_KEY} --device-name ${STRIPE_DEVICE_NAME} --forward-to localhost:80/api/v1/billing/payment/webhook/"
     network_mode: host
+
+  rabbitmq:
+    image: rabbitmq:4.0.4-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "15672:15672"  # management
+      - ${RABBITMQ_PORT}:${RABBITMQ_PORT}
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    networks:
+      - billing_network
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 1s
+      timeout: 3s
+      retries: 20
+    env_file: billing_api/.env
+
+  auth_worker:
+    build:
+      dockerfile: Dockerfile
+      context: ./billing_api
+    container_name: auth_worker
+    command: python src/run_auth_worker.py
+    env_file:
+      - billing_api/.env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/opt/app/src
+      - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      - rabbitmq
+
+  notification_worker:
+    build:
+      dockerfile: Dockerfile
+      context: ./billing_api
+    container_name: notification_worker
+    command: python src/run_notification_worker.py
+    env_file:
+      - billing_api/.env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/opt/app/src
+      - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      - rabbitmq
 
 networks:
   billing_network:

@@ -5,4 +5,4 @@
 !src
 !poetry.lock
 !pyproject.toml
-!.env
+!src/.env

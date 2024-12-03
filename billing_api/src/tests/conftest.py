@@ -11,6 +11,7 @@ from models.models import Base
 
 pytest_plugins = [
     "fixtures.subscription_plan",
+    "fixtures.users",
 ]
 
 

@@ -32,6 +32,7 @@ class SubscriptionPlan(Base):
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int]
     duration_days: Mapped[int]
+    is_archive: Mapped[bool] = mapped_column(Boolean, default=False)
 
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="plan")
 

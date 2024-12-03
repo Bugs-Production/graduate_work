@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from starlette.staticfiles import StaticFiles
 
 from api.v1 import billing, subscription, subscription_plan, transaction
+from api.v1.admin.admin_routes import router as admin_router
 from core.config import settings
-from db import postgres
+from db import postgres, rabbitmq
 
 # Для избежания варнингов для paginator в консоли
 disable_installed_extensions_check()
@@ -20,7 +21,12 @@ disable_installed_extensions_check()
 async def lifespan(app: FastAPI):
     postgres.engine = create_async_engine(postgres.dsn, echo=settings.engine_echo, future=True)
     postgres.async_session = async_sessionmaker(bind=postgres.engine, expire_on_commit=False, class_=AsyncSession)  # type: ignore[assignment]
+
+    rabbitmq.connection = await rabbitmq.create_rabbitmq_connection(settings.rabbitmq.url)
+    rabbitmq.exchange = await rabbitmq.init_rabbitmq(rabbitmq.connection)
+
     yield
+    await rabbitmq.close_rabbitmq_connection(rabbitmq.connection)
 
 
 app = FastAPI(
@@ -35,6 +41,7 @@ app.include_router(billing.router, prefix="/api/v1/billing", tags=["Billing"])
 app.include_router(transaction.router, prefix="/api/v1/billing/transactions", tags=["Transactions"])
 app.include_router(subscription_plan.router, prefix="/api/v1/subscription_plans", tags=["Subscription plans"])
 app.include_router(subscription.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
+app.include_router(admin_router, prefix="/api/v1", tags=["Admin"])
 
 add_pagination(app)
 app.mount("/static", StaticFiles(directory="static"), name="static")

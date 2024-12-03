@@ -8,6 +8,7 @@ class SubscriptionPlanBase(BaseModel):
     description: str = Field(..., min_length=1, max_length=1000)
     price: int = Field(..., ge=0)
     duration_days: int = Field(..., gt=0)
+    is_archive: bool | None = None
 
 
 class SubscriptionPlanCreate(SubscriptionPlanBase):
@@ -19,6 +20,7 @@ class SubscriptionPlanUpdate(BaseModel):
     description: str | None = Field(None, min_length=1, max_length=1000)
     price: int | None = Field(None, ge=0)
     duration_days: int | None = Field(default=None, gt=0)
+    is_archive: bool | None = None
 
 
 class SubscriptionPlanResponse(SubscriptionPlanBase):
