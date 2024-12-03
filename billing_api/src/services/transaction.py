@@ -6,10 +6,10 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from db.postgres import get_postgres_session, get_session
+from db.postgres import get_postgres_session
 from models.models import Transaction
 from services.exceptions import ORMBadRequestError, TransactionNotFoundError
-from models.enums import PaymentType, TransactionStatus
+from models.enums import PaymentType
 
 
 class TransactionService:
@@ -36,6 +36,14 @@ class TransactionService:
 
             return transaction
 
+    async def get_transactions(self, query_params: dict[str, str]) -> list[Transaction] | None:
+        async with self.postgres_session() as session:
+            try:
+                result = await session.scalars(select(Transaction).filter_by(**query_params))
+            except DBAPIError as e:
+                raise ORMBadRequestError(f"Bad request {e}") from None
+            return result.all()
+
     async def create_transaction(
         self,
         subscription_id: UUID,
@@ -43,7 +51,7 @@ class TransactionService:
         amount: int,
         payment_type: PaymentType,
         user_card_id: UUID,
-        stripe_payment_intent_id: str | None=None,
+        stripe_payment_intent_id: str | None = None,
     ):
         async with self.postgres_session() as session:
             transaction = Transaction(
@@ -57,14 +65,6 @@ class TransactionService:
             session.add(transaction)
             await session.commit()
             return transaction
-
-    async def get_transactions(self, query_params: dict[str, str]) -> list[Transaction] | None:
-        async with self.postgres_session() as session:
-            try:
-                result = await session.scalars(select(Transaction).filter_by(**query_params))
-            except DBAPIError as e:
-                raise ORMBadRequestError(f"Bad request {e}") from None
-            return result.all()
 
 
 @lru_cache
