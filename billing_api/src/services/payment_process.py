@@ -261,6 +261,21 @@ class PaymentWebhookManager:
 
             await session.commit()
 
+    async def handle_payment_refunded(self, data):
+        logger.info(f"Payment event: {data}")
+
+        stripe_payment_intent_id = data["object"]["payment_intent"]
+
+        async with self.postgres_session() as session:
+            transaction_data = await session.scalars(
+                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
+            )
+            transaction = transaction_data.first()
+            transaction.status = TransactionStatus.REFUNDED
+            session.add(transaction)
+
+            await session.commit()
+
 
 @lru_cache
 def get_payment_webhook_manager_service(
