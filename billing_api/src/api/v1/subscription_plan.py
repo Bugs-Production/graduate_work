@@ -32,13 +32,14 @@ async def get_subscription_plans(
 
 
 @router.post(
-    "/",
+    "/admin",
     response_model=SubscriptionPlanResponse,
     summary="Создать план подписки",
     description="Создание плана подписки",
     status_code=HTTPStatus.CREATED,
     responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED),  # type: ignore[reportArgumentType]
     dependencies=[Depends(require_admin)],
+    tags=["Admin"],
 )
 async def create_subscription_plan(
     subscription_plan_data: SubscriptionPlanCreate,
@@ -63,7 +64,7 @@ async def get_subscription_plan_by_id(
 
 
 @router.patch(
-    "/{subscription_plan_id}",
+    "/admin/{subscription_plan_id}",
     response_model=SubscriptionPlanResponse,
     summary="Обновить план подписки",
     description="Обновление данных выбранного плана подписки",
@@ -72,6 +73,7 @@ async def get_subscription_plan_by_id(
         HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.NOT_FOUND, HTTPStatus.FORBIDDEN, HTTPStatus.UNAUTHORIZED
     ),  # type: ignore[reportArgumentType]
     dependencies=[Depends(require_admin)],
+    tags=["Admin"],
 )
 async def update_subscription_plan(
     subscription_plan_data: SubscriptionPlanUpdate,

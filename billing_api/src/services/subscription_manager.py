@@ -82,6 +82,9 @@ class SubscriptionManager(SQLAlchemyRepository[Subscription, SubscriptionCreateF
         update_data = SubscriptionUpdate(end_date=new_end_date)
         return await self.update(subscription.id, update_data)
 
+    async def get_user_subscription(self, user_id: UUID, subscription_id: UUID) -> Subscription:
+        return await self._validate_subscription_access(user_id, subscription_id)
+
     async def _user_has_active_subscription(self, user_id: UUID) -> bool:
         """Проверяет наличие активной подписки у пользователя.
 
