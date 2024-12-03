@@ -229,25 +229,37 @@ class PaymentWebhookManager:
     async def handle_payment_succeeded(self, data):
         logger.info(f"Payment event: {data}")
 
-        stripe_obj = data["object"]
-        subscription_id = stripe_obj["metadata"].get("subscription_id")
+        stripe_payment_intent_id = data["object"]["id"]
 
-        if subscription_id:
-            async with self.postgres_session() as session:
-                transaction_data = await session.scalars(select(Transaction).filter_by(subscription_id=subscription_id))
-                transaction = transaction_data.first()
-                transaction.status = TransactionStatus.SUCCESS
-                session.add(transaction)
+        async with self.postgres_session() as session:
+            transaction_data = await session.scalars(
+                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
+            )
+            transaction = transaction_data.first()
+            transaction.status = TransactionStatus.SUCCESS
+            session.add(transaction)
 
-                subscription_data = await session.scalars(select(Subscription).filter_by(id=subscription_id))
-                subscription = subscription_data.first()
-                subscription.status = SubscriptionStatus.ACTIVE
-                session.add(subscription)
+            subscription_data = await session.scalars(select(Subscription).filter_by(id=transaction.subscription_id))
+            subscription = subscription_data.first()
+            subscription.status = SubscriptionStatus.ACTIVE
+            session.add(subscription)
 
-                await session.commit()
+            await session.commit()
 
     async def handle_payment_failed(self, data):
         logger.info(f"Payment event: {data}")
+
+        stripe_payment_intent_id = data["object"]["id"]
+
+        async with self.postgres_session() as session:
+            transaction_data = await session.scalars(
+                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
+            )
+            transaction = transaction_data.first()
+            transaction.status = TransactionStatus.FAILED
+            session.add(transaction)
+
+            await session.commit()
 
 
 @lru_cache
