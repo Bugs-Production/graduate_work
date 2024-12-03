@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from starlette.staticfiles import StaticFiles
 
 from api.v1 import billing, subscription, subscription_plan, transaction
+from api.v1.admin.admin_routes import router as admin_router
 from core.config import settings
 from db import postgres
 
@@ -35,6 +36,7 @@ app.include_router(billing.router, prefix="/api/v1/billing", tags=["Billing"])
 app.include_router(transaction.router, prefix="/api/v1/billing/transactions", tags=["Transactions"])
 app.include_router(subscription_plan.router, prefix="/api/v1/subscription_plans", tags=["Subscription plans"])
 app.include_router(subscription.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
+app.include_router(admin_router, prefix="/api/v1", tags=["Admin"])
 
 add_pagination(app)
 app.mount("/static", StaticFiles(directory="static"), name="static")

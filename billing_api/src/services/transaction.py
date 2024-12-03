@@ -15,9 +15,19 @@ class TransactionService:
     def __init__(self, postgres_session: AsyncSession):
         self.postgres_session = postgres_session
 
-    async def get_transaction_by_id(self, transaction_id: UUID, user_id: UUID) -> Transaction:
+    async def get_user_transaction_by_id(self, transaction_id: UUID, user_id: UUID) -> Transaction:
         async with self.postgres_session() as session:
             result = await session.scalars(select(Transaction).filter_by(id=str(transaction_id), user_id=str(user_id)))
+            transaction = result.first()
+
+            if transaction is None:
+                raise TransactionNotFoundError("Transaction not found")
+
+            return transaction
+
+    async def get_transaction_by_id(self, transaction_id: UUID) -> Transaction:
+        async with self.postgres_session() as session:
+            result = await session.scalars(select(Transaction).filter_by(id=str(transaction_id)))
             transaction = result.first()
 
             if transaction is None:
