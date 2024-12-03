@@ -101,7 +101,7 @@ class Transaction(Base):
         PgUUID,
         ForeignKey("usercardsstripes.id", ondelete="RESTRICT"),
     )
-    stripe_payment_intent_id: Mapped[str]
+    stripe_payment_intent_id: Mapped[str] = mapped_column(String, nullable=True)
 
     subscription: Mapped["Subscription"] = relationship(back_populates="transactions")
     user_card: Mapped["UserCardsStripe"] = relationship(back_populates="transactions")
