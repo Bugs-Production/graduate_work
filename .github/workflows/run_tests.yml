@@ -24,13 +24,13 @@ jobs:
           POSTGRES_DB: ${{env.POSTGRES_DB}}
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
-          DB_HOST: ${{env.DB_HOST}}
-          DB_PORT: ${{env.DB_PORT}}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout code
