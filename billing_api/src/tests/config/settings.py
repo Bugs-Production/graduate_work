@@ -6,12 +6,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).parent.parent
 ENV_FILE = BASE_DIR / ".env"
 
-if not ENV_FILE.is_file():
-    raise FileNotFoundError("Не найден .env файл")
+
+def get_env_file() -> Path | None:
+    return ENV_FILE if ENV_FILE.is_file() else None
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_FILE)
+    model_config = SettingsConfigDict(env_file=get_env_file())
     postgres_db: str
     postgres_user: str
     postgres_password: str
