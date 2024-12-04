@@ -11,36 +11,26 @@ from models.enums import StatusCardsEnum
 from models.models import UserCardsStripe
 
 
-@pytest_asyncio.fixture(loop_scope="session")
-async def access_token_user() -> dict:
+def auth_header(user_role: UserRole) -> dict[str, str]:
     valid_till = datetime.now() + timedelta(hours=1)
     payload = {
         "user_id": str(uuid4()),
-        "role": UserRole.BASIC_USER.value,
+        "role": user_role.value,
         "iat": int(datetime.now().timestamp()),
         "exp": int(valid_till.timestamp()),
     }
-
     token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return {"Authorization": f"Bearer {token}"}
 
-    headers = {"Authorization": f"Bearer {token}"}
-    return headers
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def access_token_user() -> dict:
+    return auth_header(UserRole.BASIC_USER)
 
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def access_token_another_user() -> dict:
-    valid_till = datetime.now() + timedelta(hours=1)
-    payload = {
-        "user_id": str(uuid4()),
-        "role": UserRole.BASIC_USER.value,
-        "iat": int(datetime.now().timestamp()),
-        "exp": int(valid_till.timestamp()),
-    }
-
-    token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-
-    headers = {"Authorization": f"Bearer {token}"}
-    return headers
+    return auth_header(UserRole.BASIC_USER)
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -64,3 +54,8 @@ async def user_card(test_session: AsyncSession, access_token_user: dict) -> User
         return new_card
 
     return _create_user_card
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def admin_auth_header() -> dict[str, str]:
+    return auth_header(UserRole.ADMIN)
