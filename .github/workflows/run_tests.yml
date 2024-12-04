@@ -6,11 +6,11 @@ on:
       - "main"
 
 env:
-  POSTGRES_DB: test_billing_db
-  POSTGRES_USER: test_user
-  POSTGRES_PASSWORD: test_password
-  DB_HOST: localhost
-  DB_PORT: 5432
+  TEST_POSTGRES_DB: test_billing_db
+  TEST_POSTGRES_USER: test_user
+  TEST_POSTGRES_PASSWORD: test_password
+  TEST_DB_HOST: localhost
+  TEST_DB_PORT: 5432
 
 jobs:
   run_tests:
@@ -21,9 +21,9 @@ jobs:
       postgres:
         image: postgres
         env:
-          POSTGRES_DB: ${{env.POSTGRES_DB}}
-          POSTGRES_USER: ${{env.POSTGRES_USER}}
-          POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
+          POSTGRES_DB: ${{env.TEST_POSTGRES_DB}}
+          POSTGRES_USER: ${{env.TEST_POSTGRES_USER}}
+          POSTGRES_PASSWORD: ${{env.TEST_POSTGRES_PASSWORD}}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
