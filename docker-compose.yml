@@ -47,6 +47,20 @@ services:
     networks:
       - billing_network
 
+  test_postgres:
+    image: postgres:16
+    container_name: test_postgres_billing
+    restart: always
+    env_file: billing_api/src/.env
+    environment:
+      - POSTGRES_DB=${TEST_POSTGRES_DB}
+      - POSTGRES_USER=${TEST_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - billing_network
+
   stripe:
     image: "stripe/stripe-cli:latest"
     container_name: stripe-cli
