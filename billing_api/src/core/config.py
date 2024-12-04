@@ -21,6 +21,22 @@ class RabbitMQSettings(BaseSettings):
         return f"amqp://{self.user}:{self.password}@{self.host}:{self.port}"
 
 
+class TestSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", env_prefix="TEST_")
+    postgres_db: str
+    postgres_user: str
+    postgres_password: str
+    db_host: str
+    db_port: int
+
+    @property
+    def test_postgres_url(self):
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.db_host}:{self.db_port}/{self.postgres_db}"
+        )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -40,6 +56,7 @@ class Settings(BaseSettings):
     notification_service_url: str = Field("http://localhost/api/v1/notitications", alias="NOTIFICATION_SERVICE_URL")
 
     rabbitmq: RabbitMQSettings = RabbitMQSettings()  # type:ignore[call-arg]
+    tests: TestSettings = TestSettings()
 
 
 logging_config.dictConfig(LOGGING)
