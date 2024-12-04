@@ -12,6 +12,9 @@ services:
     volumes:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   nginx:
     container_name: billing_nginx
@@ -86,16 +89,15 @@ services:
       interval: 1s
       timeout: 3s
       retries: 20
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
 
   auth_worker:
     build:
       dockerfile: Dockerfile
       context: ./billing_api
     container_name: auth_worker
-    command: python src/run_auth_worker.py
-    env_file:
-      - billing_api/.env
+    command: python run_auth_worker.py
+    env_file: billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -103,16 +105,16 @@ services:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   notification_worker:
     build:
       dockerfile: Dockerfile
       context: ./billing_api
     container_name: notification_worker
-    command: python src/run_notification_worker.py
-    env_file:
-      - billing_api/.env
+    command: python run_notification_worker.py
+    env_file: billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -120,7 +122,8 @@ services:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
 networks:
   billing_network:
