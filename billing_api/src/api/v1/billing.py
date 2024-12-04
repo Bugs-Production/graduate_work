@@ -10,8 +10,8 @@ from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
 from services.payment_process import (
-    PaymentWebhookManager,
-    get_payment_webhook_manager_service,
+    PaymentManager,
+    get_payment_manager_service,
 )
 
 stripe.api_key = settings.stripe_api_key
@@ -58,7 +58,7 @@ async def initialize_payment_method(
 async def stripe_webhook(
     request: Request,
     cards_manager_service: CardsManager = Depends(get_cards_manager_service),
-    payment_manager_service: PaymentWebhookManager = Depends(get_payment_webhook_manager_service),
+    payment_manager_service: PaymentManager = Depends(get_payment_manager_service),
 ) -> JSONResponse:
     payload = await request.json()
     event_type = payload.get("type")

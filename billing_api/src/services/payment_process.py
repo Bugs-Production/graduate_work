@@ -33,7 +33,6 @@ class PaymentIntentParams(BaseModel):
     metadata: dict | None
 
 
-
 class BasePaymentProcessor(ABC):
     """Базовый класс для реализаций работы с платежками."""
 
@@ -215,12 +214,6 @@ class PaymentManager:
 
         return transaction
 
-
-class PaymentWebhookManager:
-    def __init__(self, postgres_session: AsyncSession, payment_processor: PaymentProcessorStripe):
-        self.postgres_session = postgres_session
-        self._payment_processor = payment_processor
-
     async def handle_payment_succeeded(self, data):
         logger.info(f"Payment event: {data}")
 
@@ -270,14 +263,6 @@ class PaymentWebhookManager:
             session.add(transaction)
 
             await session.commit()
-
-
-@lru_cache
-def get_payment_webhook_manager_service(
-    postgres_session: AsyncSession = Depends(get_postgres_session),
-    payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
-) -> PaymentWebhookManager:
-    return PaymentWebhookManager(postgres_session, payment_processor)
 
 
 @lru_cache
