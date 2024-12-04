@@ -13,6 +13,8 @@ services:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
     depends_on:
+      postgres:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -35,7 +37,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: postgres_tasks
+    container_name: postgres_billing
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
