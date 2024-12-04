@@ -1,14 +1,14 @@
 .PHONY: build
 build:
-	docker compose build
+	docker compose --env-file billing_api/src/.env build
 
 .PHONY: start
 start:
-	docker compose up -d
+	docker compose --env-file billing_api/src/.env up -d
 
 .PHONY: stop
 stop:
-	docker compose down
+	docker compose --env-file billing_api/src/.env down
 
 .PHONY: format
 format:
