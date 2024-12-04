@@ -11,6 +11,8 @@ env:
   POSTGRES_PASSWORD: test_password
   DB_HOST: localhost
   DB_PORT: 5432
+  JWT_ALGORITHM: HS256
+  JWT_SECRET_KEY: 9A1R7V9zmKBTbqMuj2SzeiW3kP6gjgcSrMtnEIWcC4k
 
 jobs:
   run_tests:
