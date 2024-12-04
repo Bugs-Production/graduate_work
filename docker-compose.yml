@@ -12,6 +12,11 @@ services:
     volumes:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   nginx:
     container_name: billing_nginx
@@ -32,7 +37,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: postgres_tasks
+    container_name: postgres_billing
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
@@ -46,6 +51,18 @@ services:
       retries: 5
     networks:
       - billing_network
+
+  test_postgres:
+    image: postgres:16
+    container_name: test_postgres_billing
+    restart: always
+    env_file: billing_api/src/.env
+    environment:
+      - POSTGRES_DB=${TEST_POSTGRES_DB}
+      - POSTGRES_USER=${TEST_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
 
   stripe:
     image: "stripe/stripe-cli:latest"
@@ -72,16 +89,15 @@ services:
       interval: 1s
       timeout: 3s
       retries: 20
-    env_file: billing_api/.env
+    env_file: billing_api/src/.env
 
   auth_worker:
     build:
       dockerfile: Dockerfile
       context: ./billing_api
     container_name: auth_worker
-    command: python src/run_auth_worker.py
-    env_file:
-      - billing_api/.env
+    command: python run_auth_worker.py
+    env_file: billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -89,16 +105,16 @@ services:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   notification_worker:
     build:
       dockerfile: Dockerfile
       context: ./billing_api
     container_name: notification_worker
-    command: python src/run_notification_worker.py
-    env_file:
-      - billing_api/.env
+    command: python run_notification_worker.py
+    env_file: billing_api/src/.env
     restart: always
     networks:
       - billing_network
@@ -106,7 +122,8 @@ services:
       - ./billing_api/src:/opt/app/src
       - ./billing_api/logs/:/var/log/app/
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
 networks:
   billing_network:
