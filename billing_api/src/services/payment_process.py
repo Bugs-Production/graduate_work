@@ -1,24 +1,23 @@
+import logging
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from typing import Any
+from uuid import UUID
 
 import stripe
-from pydantic import BaseModel, Field
-from stripe.api_resources.payment_intent import PaymentIntent
-import logging
-from functools import lru_cache
-
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgres import get_postgres_session
+from pydantic import BaseModel, Field
 from sqlalchemy import select
-from models.models import Transaction, UserCardsStripe
-from services.transaction import TransactionService, get_admin_transaction_service
-from uuid import UUID
-from models.enums import PaymentType, TransactionStatus
-from services.exceptions import CardNotFoundException, CreatePaymentIntentException
-from services.subscription_manager import SubscriptionManager, get_subscription_manager
+from sqlalchemy.ext.asyncio import AsyncSession
+from stripe.api_resources.payment_intent import PaymentIntent
 
 from core.config import settings
+from db.postgres import get_postgres_session
+from models.enums import PaymentType, TransactionStatus
+from models.models import Transaction, UserCardsStripe
+from services.exceptions import CardNotFoundException, CreatePaymentIntentException
+from services.subscription_manager import SubscriptionManager, get_subscription_manager
+from services.transaction import TransactionService, get_admin_transaction_service
 
 logger = logging.getLogger("billing")
 
@@ -220,8 +219,8 @@ class PaymentManager:
     async def _update_transaction_status(self, data: dict, status: TransactionStatus, stripe_payment_intent_id: str):
         logger.info(f"Payment event: {data}")
 
-        filter = {"stripe_payment_intent_id": stripe_payment_intent_id}
-        transaction_data = await self.transaction_service.get_transactions(filter)
+        filter_data = {"stripe_payment_intent_id": stripe_payment_intent_id}
+        transaction_data = await self.transaction_service.get_transactions(filter_data)
         transaction = transaction_data[0]
         await self.transaction_service.set_transaction_status(transaction.id, status)
 

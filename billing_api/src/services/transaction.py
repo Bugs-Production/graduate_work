@@ -2,14 +2,14 @@ from functools import lru_cache
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.postgres import get_postgres_session
-from models.models import Transaction
-from services.exceptions import ORMBadRequestError, TransactionNotFoundError, ObjectNotUpdatedException
 from models.enums import PaymentType, TransactionStatus
+from models.models import Transaction
+from services.exceptions import ObjectNotUpdatedException, ORMBadRequestError, TransactionNotFoundError
 
 
 class TransactionService:
@@ -84,9 +84,9 @@ class TransactionService:
             try:
                 await session.merge(transaction)
                 await session.commit()
-            except Exception as e:
+            except IntegrityError as e:
                 await session.rollback()
-                raise ObjectNotUpdatedException(f"Update error: {e}")
+                raise ObjectNotUpdatedException(f"Update error: {e}") from None
 
 
 @lru_cache

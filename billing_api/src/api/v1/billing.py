@@ -9,10 +9,7 @@ from core.config import settings
 from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
-from services.payment_process import (
-    PaymentManager,
-    get_payment_manager_service,
-)
+from services.payment_process import PaymentManager, get_payment_manager_service
 
 stripe.api_key = settings.stripe_api_key
 
