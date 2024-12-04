@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest_asyncio
-from config.settings import settings  # type: ignore[import-not-found]
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.jwt_access_token import UserRole
+from core.config import settings
 from models.enums import StatusCardsEnum
 from models.models import UserCardsStripe
 
