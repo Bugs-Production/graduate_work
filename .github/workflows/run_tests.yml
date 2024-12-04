@@ -1,0 +1,53 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+env:
+  TEST_POSTGRES_DB: test_billing_db
+  TEST_POSTGRES_USER: test_user
+  TEST_POSTGRES_PASSWORD: test_password
+  TEST_DB_HOST: localhost
+  TEST_DB_PORT: 5433
+
+jobs:
+  run_tests:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: ${{env.TEST_POSTGRES_DB}}
+          POSTGRES_USER: ${{env.TEST_POSTGRES_USER}}
+          POSTGRES_PASSWORD: ${{env.TEST_POSTGRES_PASSWORD}}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry --quiet
+          cd billing_api
+          poetry install --quiet --no-interaction --no-ansi --no-root
+
+      - name: Run tests
+        run: |
+          cd billing_api/src
+          poetry run pytest

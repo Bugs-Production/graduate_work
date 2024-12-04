@@ -1,14 +1,14 @@
 .PHONY: build
 build:
-	docker compose build
+	docker compose --env-file billing_api/src/.env build
 
 .PHONY: start
 start:
-	docker compose up -d
+	docker compose --env-file billing_api/src/.env up -d
 
 .PHONY: stop
 stop:
-	docker compose down
+	docker compose --env-file billing_api/src/.env down
 
 .PHONY: format
 format:
@@ -34,9 +34,9 @@ downgrade:
 tests:
 	cd billing_api/src ; pytest -v -s
 
-.PHONY: up_test_db
-up_test_db:
-	cd billing_api/src/tests ; docker compose up -d
+#.PHONY: up_test_db
+#up_test_db:
+#	cd billing_api/src/tests ; docker compose up -d
 
 .PHONY: start_rabbit
 start_rabbit:

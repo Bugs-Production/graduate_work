@@ -1,6 +1,6 @@
 .idea
 billing_api/src/.env
-billing_api/.env.local
+billing_api/src/.env.local
 billing_api/logs
 __pycache__/
 *.py[cod]
