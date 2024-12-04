@@ -10,11 +10,11 @@ class RabbitMQSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore", env_prefix="RABBITMQ_"
     )
-    host: str
-    port: int
-    user: str
-    password: str
-    exchange_name: str = "billing_events"
+    host: str = Field("localhost", alias="RABBITMQ_HOST")
+    port: int = Field("5672", alias="RABBITMQ_PORT")
+    user: str = Field("user", alias="RABBITMQ_USER")
+    password: str = Field("password", alias="RABBITMQ_PASSWORD")
+    exchange_name: str = Field("billing_events", alias="RABBITMQ_EXCHANGE_NAME")
 
     @property
     def url(self):
