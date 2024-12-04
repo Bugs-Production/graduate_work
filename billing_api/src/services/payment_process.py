@@ -11,11 +11,12 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgres import get_postgres_session
 from sqlalchemy import select
-from models.models import Transaction, UserCardsStripe, Subscription
+from models.models import Transaction, UserCardsStripe
 from services.transaction import TransactionService, get_admin_transaction_service
 from uuid import UUID
-from models.enums import PaymentType, SubscriptionStatus, TransactionStatus
+from models.enums import PaymentType, TransactionStatus
 from services.exceptions import CardNotFoundException, CreatePaymentIntentException
+from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
 from core.config import settings
 
@@ -126,7 +127,7 @@ class PaymentProcessorStripe(BasePaymentProcessor):
                 stripe_args.off_session = True
                 stripe_args.confirm = True
 
-            return await stripe.PaymentIntent.create_async(**stripe_args.model_dump())
+            return await stripe.PaymentIntent.create_async(**stripe_args.model_dump())  # type: ignore[attr-defined]
 
         except ValueError as e:
             logger.warning(f"Value error: {e}\nCustomer_id: {e}\nPayment_method: {e}")
@@ -155,10 +156,12 @@ class PaymentManager:
         postgres_session: AsyncSession,
         payment_processor: PaymentProcessorStripe,
         transaction_service: TransactionService,
+        subscription_manager: SubscriptionManager,
     ):
         self.postgres_session = postgres_session
         self.payment_processor = payment_processor
         self.transaction_service = transaction_service
+        self.subscription_manager = subscription_manager
 
     async def _get_stripe_card_data(self, card_id, user_id):
         async with self.postgres_session() as session:
@@ -214,55 +217,25 @@ class PaymentManager:
 
         return transaction
 
-    async def handle_payment_succeeded(self, data):
+    async def _update_transaction_status(self, data: dict, status: TransactionStatus, stripe_payment_intent_id: str):
         logger.info(f"Payment event: {data}")
 
+        filter = {"stripe_payment_intent_id": stripe_payment_intent_id}
+        transaction_data = await self.transaction_service.get_transactions(filter)
+        transaction = transaction_data[0]
+        await self.transaction_service.set_transaction_status(transaction.id, status)
+
+    async def handle_payment_succeeded(self, data):
         stripe_payment_intent_id = data["object"]["id"]
-
-        async with self.postgres_session() as session:
-            transaction_data = await session.scalars(
-                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
-            )
-            transaction = transaction_data.first()
-            transaction.status = TransactionStatus.SUCCESS
-            session.add(transaction)
-
-            subscription_data = await session.scalars(select(Subscription).filter_by(id=transaction.subscription_id))
-            subscription = subscription_data.first()
-            subscription.status = SubscriptionStatus.ACTIVE
-            session.add(subscription)
-
-            await session.commit()
+        await self._update_transaction_status(data, TransactionStatus.SUCCESS, stripe_payment_intent_id)
 
     async def handle_payment_failed(self, data):
-        logger.info(f"Payment event: {data}")
-
         stripe_payment_intent_id = data["object"]["id"]
-
-        async with self.postgres_session() as session:
-            transaction_data = await session.scalars(
-                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
-            )
-            transaction = transaction_data.first()
-            transaction.status = TransactionStatus.FAILED
-            session.add(transaction)
-
-            await session.commit()
+        await self._update_transaction_status(data, TransactionStatus.FAILED, stripe_payment_intent_id)
 
     async def handle_payment_refunded(self, data):
-        logger.info(f"Payment event: {data}")
-
         stripe_payment_intent_id = data["object"]["payment_intent"]
-
-        async with self.postgres_session() as session:
-            transaction_data = await session.scalars(
-                select(Transaction).filter_by(stripe_payment_intent_id=stripe_payment_intent_id)
-            )
-            transaction = transaction_data.first()
-            transaction.status = TransactionStatus.REFUNDED
-            session.add(transaction)
-
-            await session.commit()
+        await self._update_transaction_status(data, TransactionStatus.REFUNDED, stripe_payment_intent_id)
 
 
 @lru_cache
@@ -270,5 +243,6 @@ def get_payment_manager_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
     payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
+    subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
 ) -> PaymentManager:
-    return PaymentManager(postgres_session, payment_processor, transaction_service)
+    return PaymentManager(postgres_session, payment_processor, transaction_service, subscription_manager)

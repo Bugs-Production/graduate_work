@@ -8,8 +8,8 @@ from sqlalchemy.future import select
 
 from db.postgres import get_postgres_session
 from models.models import Transaction
-from services.exceptions import ORMBadRequestError, TransactionNotFoundError
-from models.enums import PaymentType
+from services.exceptions import ORMBadRequestError, TransactionNotFoundError, ObjectNotUpdatedException
+from models.enums import PaymentType, TransactionStatus
 
 
 class TransactionService:
@@ -44,6 +44,13 @@ class TransactionService:
                 raise ORMBadRequestError(f"Bad request {e}") from None
             return result.all()
 
+    async def set_transaction_status(self, transaction_id: UUID, status: TransactionStatus) -> None:
+        async with self.postgres_session() as session:
+            transaction = await self.get_transaction_by_id(transaction_id)
+            transaction.status = status
+            await session.merge(transaction)
+            await session.commit()
+
     async def create_transaction(
         self,
         subscription_id: UUID,
@@ -65,6 +72,21 @@ class TransactionService:
             session.add(transaction)
             await session.commit()
             return transaction
+
+    async def update_transaction(self, transaction_id: UUID, updated_data: dict) -> Transaction:
+        transaction = self.get_transaction_by_id(transaction_id)
+
+        for key, value in updated_data.items():
+            if hasattr(transaction, key):
+                setattr(transaction, key, value)
+
+        async with self.postgres_session() as session:
+            try:
+                await session.merge(transaction)
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                raise ObjectNotUpdatedException(f"Update error: {e}")
 
 
 @lru_cache
