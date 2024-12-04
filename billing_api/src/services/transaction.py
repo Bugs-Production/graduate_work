@@ -2,13 +2,14 @@ from functools import lru_cache
 from uuid import UUID
 
 from fastapi import Depends
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.postgres import get_postgres_session
+from models.enums import PaymentType, TransactionStatus
 from models.models import Transaction
-from services.exceptions import ORMBadRequestError, TransactionNotFoundError
+from services.exceptions import ObjectNotUpdatedException, ORMBadRequestError, TransactionNotFoundError
 
 
 class TransactionService:
@@ -42,6 +43,50 @@ class TransactionService:
             except DBAPIError as e:
                 raise ORMBadRequestError(f"Bad request {e}") from None
             return result.all()
+
+    async def set_transaction_status(self, transaction_id: UUID, status: TransactionStatus) -> None:
+        async with self.postgres_session() as session:
+            transaction = await self.get_transaction_by_id(transaction_id)
+            transaction.status = status
+            await session.merge(transaction)
+            await session.commit()
+
+    async def create_transaction(
+        self,
+        subscription_id: UUID,
+        user_id: UUID,
+        amount: int,
+        payment_type: PaymentType,
+        user_card_id: UUID,
+        stripe_payment_intent_id: str | None = None,
+    ):
+        async with self.postgres_session() as session:
+            transaction = Transaction(
+                subscription_id=subscription_id,
+                user_id=user_id,
+                amount=amount,
+                payment_type=payment_type,
+                user_card_id=user_card_id,
+                stripe_payment_intent_id=stripe_payment_intent_id,
+            )
+            session.add(transaction)
+            await session.commit()
+            return transaction
+
+    async def update_transaction(self, transaction_id: UUID, updated_data: dict) -> Transaction:
+        transaction = self.get_transaction_by_id(transaction_id)
+
+        for key, value in updated_data.items():
+            if hasattr(transaction, key):
+                setattr(transaction, key, value)
+
+        async with self.postgres_session() as session:
+            try:
+                await session.merge(transaction)
+                await session.commit()
+            except IntegrityError as e:
+                await session.rollback()
+                raise ObjectNotUpdatedException(f"Update error: {e}") from None
 
 
 @lru_cache

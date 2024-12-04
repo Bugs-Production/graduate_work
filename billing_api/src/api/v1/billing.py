@@ -9,6 +9,7 @@ from core.config import settings
 from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
+from services.payment_process import PaymentManager, get_payment_manager_service
 
 stripe.api_key = settings.stripe_api_key
 
@@ -52,14 +53,23 @@ async def initialize_payment_method(
     description="Обрабатывает события Stripe Webhook, такие как привязка карты или ошибки.",
 )
 async def stripe_webhook(
-    request: Request, manager_service: CardsManager = Depends(get_cards_manager_service)
+    request: Request,
+    cards_manager_service: CardsManager = Depends(get_cards_manager_service),
+    payment_manager_service: PaymentManager = Depends(get_payment_manager_service),
 ) -> JSONResponse:
     payload = await request.json()
     event_type = payload.get("type")
     data = payload.get("data")
 
     if data is not None:
-        await manager_service.handle_webhook(event_type=event_type, data=data)
+        if event_type == "payment_intent.succeeded":
+            await payment_manager_service.handle_payment_succeeded(data=data)
+        elif event_type == "payment_intent.payment_failed":
+            await payment_manager_service.handle_payment_failed(data=data)
+        elif event_type == "charge.refunded":
+            await payment_manager_service.handle_payment_refunded(data=data)
+        else:
+            await cards_manager_service.handle_webhook(event_type=event_type, data=data)
 
     return JSONResponse(content={"detail": "success"})
 
