@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import stripe
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field
 from stripe.api_resources.payment_intent import PaymentIntent
 import logging
 from functools import lru_cache
@@ -23,7 +23,7 @@ logger = logging.getLogger("billing")
 
 
 class PaymentIntentParams(BaseModel):
-    amount: int
+    amount: int = Field(gt=0)
     currency: str
     customer: str | None
     payment_method: str | None
@@ -32,11 +32,6 @@ class PaymentIntentParams(BaseModel):
     off_session: bool = False
     metadata: dict | None
 
-    @field_validator("amount")
-    def check_amount(cls, value):
-        if value < 0:
-            raise ValueError("The amount cannot be less than zero!")
-        return value
 
 
 class BasePaymentProcessor(ABC):
