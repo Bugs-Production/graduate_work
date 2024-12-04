@@ -1,4 +1,4 @@
-"""headMSG
+"""set_nullable_for_stripe_payment_intent_id
 
 Revision ID: 8859ae0f173e
 Revises: 6c8b90e219a8
