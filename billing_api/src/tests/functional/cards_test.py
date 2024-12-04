@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
+from core.config import settings
 from models.enums import StatusCardsEnum
 from models.models import UserCardsStripe
 
@@ -80,6 +81,9 @@ class TestInitializePaymentMethod:
         self, mock_create_card, api_client, access_token_user, test_session
     ) -> None:
         """Проверка успешного запроса на создание карты."""
+        if settings.stripe_api_key == "stripe_secret_key":
+            pytest.skip("Пропущен в связи с тем, что API KEY страйпа не сконфигурирован.")
+
         mock_create_card.return_value = "https://mocked.stripe.url/checkout"
 
         response = await api_client.post(self.path, headers=access_token_user)
