@@ -23,6 +23,7 @@ greenlet = "^3.1.1"
 python-jose = "3.3.0"
 aio-pika = "^9.5.1"
 celery = "^5.4.0"
+asgiref = "^3.8.1"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "0.7.4"

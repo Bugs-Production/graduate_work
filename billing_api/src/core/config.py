@@ -58,9 +58,7 @@ class Settings(BaseSettings):
     rabbitmq: RabbitMQSettings = RabbitMQSettings()  # type:ignore[call-arg]
     tests: TestSettings = TestSettings()
 
-    celery_scheduler_interval_sec: int = Field(
-        60, alias="CELERY_SСHEDULER_INTERVAL_SEC"
-    )
+    celery_scheduler_interval_sec: int = Field(60, alias="CELERY_SСHEDULER_INTERVAL_SEC")
 
 
 logging_config.dictConfig(LOGGING)
