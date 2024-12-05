@@ -6,6 +6,7 @@ from fastapi_pagination import Page, paginate
 
 from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, subscription_query_params
+from schemas.admin import TransactionSchemaBaseResponse
 from schemas.subscription import SubscriptionCreate, SubscriptionRenew, SubscriptionResponse
 from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
@@ -61,6 +62,23 @@ async def create_subscription(
     token: AccessTokenPayload = Depends(security_jwt),
 ):
     return await subscription_manager.create_subscription(token.user_id, subscription_data)
+
+
+@router.post(
+    "/{subscription_id}/pay",
+    response_model=TransactionSchemaBaseResponse,
+    summary="Оплатить подписку",
+    description="Создаёт запрос на оплату выбранной подписки пользователя",
+    status_code=HTTPStatus.OK,
+    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND),  # type: ignore[reportArgumentType]
+)
+async def pay_for_subscription(
+    card_id: UUID,
+    subscription_id: UUID = Path(..., description="ID подписки"),
+    subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
+    token: AccessTokenPayload = Depends(security_jwt),
+):
+    return await subscription_manager.initate_subscription_payment(token.user_id, card_id, subscription_id)
 
 
 @router.post(

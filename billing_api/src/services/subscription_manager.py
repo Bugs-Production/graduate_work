@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Sequence
 from functools import lru_cache
 from uuid import UUID
@@ -15,6 +16,8 @@ from services.external import AuthService, NotificationService
 from services.payment_process import PaymentManager, get_payment_manager_service
 from services.subscription import SubscriptionService
 from services.subscription_plan import SubscriptionPlanService
+
+logger = logging.getLogger(__name__)
 
 
 class SubscriptionManager:
@@ -91,9 +94,21 @@ class SubscriptionManager:
         """Включает/отключает автоматическое продление подписки."""
         return await self._subscription_service.toggle_auto_renewal(user_id, subscription_id)
 
-    async def handle_payment_webhook(self, payment_gateway_response: dict) -> None:
+    async def handle_payment_webhook(self, event_type: str, payment_gateway_response: dict) -> None:
         """Обрабатывает ответ от платёжной системы."""
-        pass
+
+        handlers = {
+            "payment_intent.succeeded": self._handle_succefull_subscription_payment,
+            "payment_intent.payment_failed": self._handle_failed_subscription_payment,
+            "charge.refunded": self._handle_refund_subscription_payment,
+        }
+
+        handler = handlers.get(event_type)
+        if handler:
+            logger.info(f"Обработка события {event_type}")
+            await handler(payment_gateway_response)
+        else:
+            logger.warning(f"Не найден обработки для события типа {event_type}")
 
     async def _handle_succefull_subscription_payment(self, payment_gateway_response: dict) -> None:
         """Обработка события успешного платежа по подписке."""
