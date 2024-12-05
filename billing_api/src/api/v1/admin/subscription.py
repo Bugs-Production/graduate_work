@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Path
 from fastapi_pagination import Page, paginate
 
 from api.utils import generate_error_responses, subscription_query_params
-from schemas.subscription import SubscriptionCreate, SubscriptionResponse
+from schemas.subscription import SubscriptionCreateAdmin, SubscriptionResponse
 from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
 router = APIRouter()
@@ -52,11 +52,10 @@ async def get_subscriptions(
     responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND),  # type: ignore[reportArgumentType]
 )
 async def create_subscription(
-    user_id: UUID,
-    subscription_data: SubscriptionCreate,
+    subscription_data: SubscriptionCreateAdmin,
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
 ):
-    return await subscription_manager.create_subscription(user_id, subscription_data)
+    return await subscription_manager.create_subscription(subscription_data.user_id, subscription_data)
 
 
 @router.post(
