@@ -16,7 +16,6 @@ from db.postgres import get_postgres_session
 from models.enums import PaymentType, TransactionStatus
 from models.models import Transaction, UserCardsStripe
 from services.exceptions import CardNotFoundException, CreatePaymentIntentException
-from services.subscription_manager import SubscriptionManager, get_subscription_manager
 from services.transaction import TransactionService, get_admin_transaction_service
 
 logger = logging.getLogger("billing")
@@ -155,12 +154,10 @@ class PaymentManager:
         postgres_session: AsyncSession,
         payment_processor: PaymentProcessorStripe,
         transaction_service: TransactionService,
-        subscription_manager: SubscriptionManager,
     ):
         self.postgres_session = postgres_session
         self.payment_processor = payment_processor
         self.transaction_service = transaction_service
-        self.subscription_manager = subscription_manager
 
     async def _get_stripe_card_data(self, card_id, user_id):
         async with self.postgres_session() as session:
@@ -242,6 +239,5 @@ def get_payment_manager_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
     payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
-    subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
 ) -> PaymentManager:
-    return PaymentManager(postgres_session, payment_processor, transaction_service, subscription_manager)
+    return PaymentManager(postgres_session, payment_processor, transaction_service)
