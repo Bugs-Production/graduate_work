@@ -4,12 +4,13 @@ from uuid import UUID
 
 from fastapi import Depends
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgres import get_postgres_session
 from models.enums import StatusCardsEnum
 from models.models import UserCardsStripe
-from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
+from services.exceptions import BadRequestError, CardNotFoundException, ObjectNotFoundError, UserNotOwnerOfCardException
 from services.payment_process import PaymentProcessorStripe
 
 logger = logging.getLogger("billing")
@@ -197,6 +198,20 @@ class CardsManager:
 
             await session.commit()
             return True
+
+    async def get_card_by_id(self, card_id: UUID) -> UserCardsStripe:
+        card = await self._get_card_user(card_id=str(card_id))
+        if not card:
+            raise ObjectNotFoundError("User card not found")
+        return card
+
+    async def get_all_cards(self, query_params: dict[str, str]) -> list[UserCardsStripe] | None:
+        async with self.postgres_session() as session:
+            try:
+                result = await session.scalars(select(UserCardsStripe).filter_by(**query_params))
+            except DBAPIError as exc:
+                raise BadRequestError(f"Bad request {exc}") from None
+            return result.all()
 
     async def get_all_user_cards(self, user_id: str) -> list | None:
         """Получает все активные карты юзера."""
