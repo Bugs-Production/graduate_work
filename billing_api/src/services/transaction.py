@@ -74,7 +74,7 @@ class TransactionService:
             return transaction
 
     async def update_transaction(self, transaction_id: UUID, updated_data: dict) -> Transaction:
-        transaction = self.get_transaction_by_id(transaction_id)
+        transaction = await self.get_transaction_by_id(transaction_id)
 
         for key, value in updated_data.items():
             if hasattr(transaction, key):
