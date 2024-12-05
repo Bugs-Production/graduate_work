@@ -6,7 +6,7 @@ from fastapi_pagination import Page, paginate
 
 from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, transaction_query_params
-from schemas.admin import TransactionSchemaBaseResponse, TransactionSchemaResponse
+from schemas.transaction import TransactionSchemaBaseResponse, TransactionSchemaResponse
 from services.exceptions import TransactionNotFoundError
 from services.transaction import TransactionService, get_admin_transaction_service
 

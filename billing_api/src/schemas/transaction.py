@@ -1,14 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-
-
-class IDMixin(BaseModel):
-    id: UUID
-
-    class Config:
-        from_attributes = True
+from schemas.base import IDMixin
 
 
 class TransactionSchemaBaseResponse(IDMixin):

@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import Query
 from pydantic import BaseModel
 
-from models.enums import PaymentType, SubscriptionStatus, TransactionStatus
+from models.enums import PaymentType, StatusCardsEnum, SubscriptionStatus, TransactionStatus
 
 
 class ErrorResponse(BaseModel):
@@ -38,4 +38,13 @@ def subscription_query_params(
     auto_renewal: Annotated[bool | None, Query()] = None,
 ) -> dict[str, TransactionStatus | PaymentType]:
     query_params = {"status": status, "plan_id": plan_id, "auto_renewal": auto_renewal}
+    return {k: v for k, v in query_params.items() if v is not None}
+
+
+def user_card_query_params(
+    status: Annotated[StatusCardsEnum | None, Query()] = None,
+    user_id: Annotated[UUID | None, Query()] = None,
+    is_default: Annotated[bool | None, Query()] = None,
+) -> dict[str, StatusCardsEnum | PaymentType]:
+    query_params = {"status": status, "user_id": user_id, "is_default": is_default}
     return {k: v for k, v in query_params.items() if v is not None}
