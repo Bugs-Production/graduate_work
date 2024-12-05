@@ -208,11 +208,11 @@ class PaymentManager:
         if not payment_intent:
             raise CreatePaymentIntentException("Failure to create a payment intent")
 
-        transaction.stripe_payment_intent_id = payment_intent["id"]
+        transaction_updated_data = {"stripe_payment_intent_id": payment_intent["id"]}
 
-        async with self.postgres_session() as session:
-            session.add(transaction)
-            await session.commit()
+        transaction = await self.transaction_service.update_transaction(
+            transaction_id=transaction.id, updated_data=transaction_updated_data
+        )
 
         return transaction
 
