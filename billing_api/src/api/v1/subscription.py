@@ -6,7 +6,7 @@ from fastapi_pagination import Page, paginate
 
 from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, subscription_query_params
-from schemas.admin import TransactionSchemaBaseResponse
+from schemas.admin import TransactionSchemaBaseResponse  # type: ignore[import-not-found]
 from schemas.subscription import SubscriptionCreate, SubscriptionRenew, SubscriptionResponse
 from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
