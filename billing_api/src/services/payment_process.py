@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 import stripe
+from aio_pika.abc import AbstractExchange
 from fastapi import Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -13,9 +14,11 @@ from stripe.api_resources.payment_intent import PaymentIntent
 
 from core.config import settings
 from db.postgres import get_postgres_session
+from db.rabbitmq import QueueName, get_rabbitmq_exchange
 from models.enums import PaymentType, TransactionStatus
 from models.models import Transaction, UserCardsStripe
 from services.exceptions import CardNotFoundException, CreatePaymentIntentException
+from services.external import NotificationService
 from services.transaction import TransactionService, get_admin_transaction_service
 
 logger = logging.getLogger("billing")
@@ -154,10 +157,12 @@ class PaymentManager:
         postgres_session: AsyncSession,
         payment_processor: PaymentProcessorStripe,
         transaction_service: TransactionService,
+        notification_service: NotificationService,
     ):
         self.postgres_session = postgres_session
         self.payment_processor = payment_processor
         self.transaction_service = transaction_service
+        self.notification_service = notification_service
 
     async def _get_stripe_card_data(self, card_id, user_id):
         async with self.postgres_session() as session:
@@ -221,7 +226,9 @@ class PaymentManager:
         filter_data = {"stripe_payment_intent_id": stripe_payment_intent_id}
         transaction_data = await self.transaction_service.get_transactions(filter_data)
         transaction = transaction_data[0]  # TODO
-        return await self.transaction_service.update_transaction(transaction.id, {"status": status})
+        result = await self.transaction_service.update_transaction(transaction.id, {"status": status})
+        await self.notification_service.notify_user_transaction_status(transaction.user_id, status)
+        return result
 
     async def handle_payment_succeeded(self, data) -> Transaction:
         stripe_payment_intent_id = data["object"]["id"]
@@ -251,5 +258,7 @@ def get_payment_manager_service(
     postgres_session: AsyncSession = Depends(get_postgres_session),
     payment_processor: PaymentProcessorStripe = Depends(PaymentProcessorStripe),
     transaction_service: TransactionService = Depends(get_admin_transaction_service),
+    exchange: AbstractExchange = Depends(get_rabbitmq_exchange),
 ) -> PaymentManager:
-    return PaymentManager(postgres_session, payment_processor, transaction_service)
+    notification_service = NotificationService(QueueName.NOTIFICATION, exchange)
+    return PaymentManager(postgres_session, payment_processor, transaction_service, notification_service)
