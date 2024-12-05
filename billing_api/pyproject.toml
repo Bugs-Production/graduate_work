@@ -22,6 +22,7 @@ orjson = "^3.10.11"
 greenlet = "^3.1.1"
 python-jose = "3.3.0"
 aio-pika = "^9.5.1"
+celery = "^5.4.0"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "0.7.4"
