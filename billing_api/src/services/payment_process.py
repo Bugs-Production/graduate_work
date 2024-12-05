@@ -222,7 +222,7 @@ class PaymentManager:
         filter_data = {"stripe_payment_intent_id": stripe_payment_intent_id}
         transaction_data = await self.transaction_service.get_transactions(filter_data)
         transaction = transaction_data[0]
-        await self.transaction_service.set_transaction_status(transaction.id, status)
+        await self.transaction_service.update_transaction(transaction.id, {"status": status})
 
     async def handle_payment_succeeded(self, data):
         stripe_payment_intent_id = data["object"]["id"]
