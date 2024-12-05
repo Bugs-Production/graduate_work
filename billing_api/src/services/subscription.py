@@ -72,13 +72,23 @@ class SubscriptionService(SQLAlchemyRepository[Subscription, SubscriptionCreateF
     ) -> Subscription:
         """Продляет подписку.
 
-        Под продлением понимается смещение даты завершения подписки на количество дней, указанных в плане подписки.
+        Под продлением понимается создание новой подписки.
         """
+        current_subscription = await self._validate_subscription_access(user_id, subscription_id)
         subscription_plan = await self._subscription_plan_service.get(renew_data.plan_id)
-        subscription = await self._validate_subscription_access(user_id, subscription_id)
-        new_end_date = subscription.end_date + timedelta(days=subscription_plan.duration_days)
-        update_data = SubscriptionUpdate(end_date=new_end_date)
-        return await self.update(subscription.id, update_data)
+
+        renewed_start_date = current_subscription.end_date
+        renewed_end_date = renewed_start_date + timedelta(days=subscription_plan.duration_days)
+
+        renewed_subscription_data = SubscriptionCreateFull(
+            user_id=current_subscription.user_id,
+            plan_id=subscription_plan.id,
+            start_date=renewed_start_date,
+            end_date=renewed_end_date,
+            status=SubscriptionStatus.PENDING,
+            auto_renewal=current_subscription.auto_renewal,
+        )
+        return await self.create(renewed_subscription_data)
 
     async def change_status(self, subscription_id: UUID, new_status: SubscriptionStatus) -> Subscription:
         """Обновляет статус подписки."""
@@ -88,6 +98,12 @@ class SubscriptionService(SQLAlchemyRepository[Subscription, SubscriptionCreateF
 
     async def get_user_subscription(self, user_id: UUID, subscription_id: UUID) -> Subscription:
         return await self._validate_subscription_access(user_id, subscription_id)
+
+    async def get_payment_amount(self, subscription_id: UUID) -> int:
+        """Получает размер платежа по подписке."""
+        subscription = await self.get(subscription_id)
+        subscription_plan = await self._subscription_plan_service.get(subscription.plan_id)
+        return subscription_plan.price
 
     async def _user_has_active_subscription(self, user_id: UUID) -> bool:
         """Проверяет наличие активной подписки у пользователя.
