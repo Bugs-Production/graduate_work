@@ -10,8 +10,10 @@ from main import app
 from models.models import Base
 
 pytest_plugins = [
-    "fixtures.subscription_plan",
     "fixtures.users",
+    "fixtures.subscription_plan",
+    "fixtures.subscription",
+    "fixtures.transaction",
 ]
 
 

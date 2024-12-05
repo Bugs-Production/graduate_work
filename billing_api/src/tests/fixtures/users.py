@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -54,6 +55,29 @@ async def user_card(test_session: AsyncSession, access_token_user: dict) -> User
         return new_card
 
     return _create_user_card
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def random_user_cards(test_session: AsyncSession):
+    user_cards = [
+        UserCardsStripe(
+            id=uuid4(),
+            user_id=uuid4(),
+            stripe_user_id=f"cus_{random.randint(1000000, 9999999)}",
+            token_card=f"tok_{uuid4()}",
+            status=random.choice(list(StatusCardsEnum)),
+            last_numbers_card=str(random.randint(1000, 9999)),
+            is_default=random.choice([True, False]),
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+        for _ in range(4)
+    ]
+
+    test_session.add_all(user_cards)
+    await test_session.commit()
+
+    return user_cards
 
 
 @pytest_asyncio.fixture(loop_scope="session")
