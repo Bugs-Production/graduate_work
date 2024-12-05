@@ -172,10 +172,10 @@ class PaymentManager:
     async def process_payment_with_card(
         self,
         amount: int,
-        currency: str,
         subscription_id: UUID,
         user_id: UUID,
         card_id: UUID,
+        currency: str = "RUB",
         description: str | None = None,
     ) -> Transaction:
         payment_meta = {
@@ -213,25 +213,37 @@ class PaymentManager:
 
         return transaction
 
-    async def _update_transaction_status(self, data: dict, status: TransactionStatus, stripe_payment_intent_id: str):
+    async def _update_transaction_status(
+        self, data: dict, status: TransactionStatus, stripe_payment_intent_id: str
+    ) -> Transaction:
         logger.info(f"Payment event: {data}")
 
         filter_data = {"stripe_payment_intent_id": stripe_payment_intent_id}
         transaction_data = await self.transaction_service.get_transactions(filter_data)
-        transaction = transaction_data[0]
-        await self.transaction_service.update_transaction(transaction.id, {"status": status})
+        transaction = transaction_data[0]  # TODO
+        return await self.transaction_service.update_transaction(transaction.id, {"status": status})
 
-    async def handle_payment_succeeded(self, data):
+    async def handle_payment_succeeded(self, data) -> Transaction:
         stripe_payment_intent_id = data["object"]["id"]
-        await self._update_transaction_status(data, TransactionStatus.SUCCESS, stripe_payment_intent_id)
+        return await self._update_transaction_status(data, TransactionStatus.SUCCESS, stripe_payment_intent_id)
 
-    async def handle_payment_failed(self, data):
+    async def handle_payment_failed(self, data) -> Transaction:
         stripe_payment_intent_id = data["object"]["id"]
-        await self._update_transaction_status(data, TransactionStatus.FAILED, stripe_payment_intent_id)
+        return await self._update_transaction_status(data, TransactionStatus.FAILED, stripe_payment_intent_id)
 
-    async def handle_payment_refunded(self, data):
+    async def handle_payment_refunded(self, data) -> Transaction:
         stripe_payment_intent_id = data["object"]["payment_intent"]
-        await self._update_transaction_status(data, TransactionStatus.REFUNDED, stripe_payment_intent_id)
+        return await self._update_transaction_status(data, TransactionStatus.REFUNDED, stripe_payment_intent_id)
+
+    async def get_user_default_card_id(self, user_id: UUID) -> UUID:
+        async with self.postgres_session() as session:
+            cards_data = await session.scalars(select(UserCardsStripe).filter_by(user_id=str(user_id), is_default=True))
+            stripe_card = cards_data.first()
+
+            if stripe_card is None:
+                raise CardNotFoundException("Default card not found")
+
+            return stripe_card.id
 
 
 @lru_cache
