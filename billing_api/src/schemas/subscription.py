@@ -28,6 +28,10 @@ class SubscriptionCreateFull(SubscriptionCreate):
     end_date: datetime
 
 
+class SubscriptionCreateAdmin(SubscriptionCreate):
+    user_id: UUID
+
+
 class SubscriptionRenew(BaseModel):
     """Схема для обновления подписки.
 
