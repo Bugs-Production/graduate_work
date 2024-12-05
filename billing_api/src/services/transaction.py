@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.postgres import get_postgres_session
-from models.enums import PaymentType, TransactionStatus
+from models.enums import PaymentType
 from models.models import Transaction
 from services.exceptions import ObjectNotUpdatedException, ORMBadRequestError, TransactionNotFoundError
 
@@ -43,13 +43,6 @@ class TransactionService:
             except DBAPIError as e:
                 raise ORMBadRequestError(f"Bad request {e}") from None
             return result.all()
-
-    async def set_transaction_status(self, transaction_id: UUID, status: TransactionStatus) -> None:
-        async with self.postgres_session() as session:
-            transaction = await self.get_transaction_by_id(transaction_id)
-            transaction.status = status
-            await session.merge(transaction)
-            await session.commit()
 
     async def create_transaction(
         self,
