@@ -78,6 +78,22 @@ class SubscriptionManager:
         await self.initate_subscription_payment(user_id, card_id=default_user_card, subscription_id=new_subscription.id)
         return new_subscription
 
+    async def mark_subscription_expired(
+        self, user_id: UUID, subscription_id: UUID, role_detachment: bool = True
+    ) -> Subscription:
+        """Продляет подписку и инициирует оплату подписки дефолтной картой пользователя.
+
+        Под продлением понимается создание новой подписки.
+        """
+        subscription = await self.get_subscription_by_id(subscription_id)
+        await self._subscription_service.change_status(
+            subscription_id=subscription.id, new_status=SubscriptionStatus.EXPIRED
+        )
+        if role_detachment:
+            await self._auth_service.downgrade_user_to_basic(user_id)
+            await self._notification_service.notify_user_subscription_status(user_id, SubscriptionStatus.EXPIRED)
+        return subscription
+
     async def get_subscription_by_id(self, subscription_id: UUID) -> Subscription:
         """Получает подписку по id."""
         return await self._subscription_service.get(subscription_id)

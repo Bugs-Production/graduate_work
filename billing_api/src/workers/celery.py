@@ -1,5 +1,5 @@
-from celery import Celery # type: ignore[import-untyped]
-from kombu import Exchange, Queue # type: ignore[import-untyped]
+from celery import Celery  # type: ignore[import-untyped]
+from kombu import Exchange, Queue  # type: ignore[import-untyped]
 
 from core.config import settings
 
