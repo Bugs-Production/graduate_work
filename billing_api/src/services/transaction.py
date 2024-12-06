@@ -80,6 +80,7 @@ class TransactionService:
             except IntegrityError as e:
                 await session.rollback()
                 raise ObjectNotUpdatedException(f"Update error: {e}") from None
+        return transaction
 
 
 @lru_cache

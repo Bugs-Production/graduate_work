@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 import stripe
@@ -9,7 +10,9 @@ from core.config import settings
 from core.templates import templates
 from services.cards_manager import CardsManager, get_cards_manager_service
 from services.exceptions import CardNotFoundException, UserNotOwnerOfCardException
-from services.payment_process import PaymentManager, get_payment_manager_service
+from services.subscription_manager import SubscriptionManager, get_subscription_manager
+
+logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.stripe_api_key
 
@@ -55,21 +58,27 @@ async def initialize_payment_method(
 async def stripe_webhook(
     request: Request,
     cards_manager_service: CardsManager = Depends(get_cards_manager_service),
-    payment_manager_service: PaymentManager = Depends(get_payment_manager_service),
+    subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
 ) -> JSONResponse:
     payload = await request.json()
     event_type = payload.get("type")
     data = payload.get("data")
 
-    if data is not None:
-        if event_type == "payment_intent.succeeded":
-            await payment_manager_service.handle_payment_succeeded(data=data)
-        elif event_type == "payment_intent.payment_failed":
-            await payment_manager_service.handle_payment_failed(data=data)
-        elif event_type == "charge.refunded":
-            await payment_manager_service.handle_payment_refunded(data=data)
-        else:
-            await cards_manager_service.handle_webhook(event_type=event_type, data=data)
+    webhook_handlers = {
+        # обработка в CardsManager
+        "payment_method.attached": cards_manager_service.handle_webhook,
+        "setup_intent.succeeded": cards_manager_service.handle_webhook,
+        "setup_intent.setup_failed": cards_manager_service.handle_webhook,
+        # обработка в SubscriptionManager
+        "payment_intent.succeeded": subscription_manager.handle_payment_webhook,
+        "payment_intent.payment_failed": subscription_manager.handle_payment_webhook,
+        "charge.refunded": subscription_manager.handle_payment_webhook,
+    }
+    handler = webhook_handlers.get(event_type)
+    if handler:
+        await handler(event_type, data)
+    else:
+        logger.warning(f"Не найден обработчик для вебхуа типа {event_type}")
 
     return JSONResponse(content={"detail": "success"})
 
