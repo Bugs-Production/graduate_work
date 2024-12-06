@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 from datetime import datetime
 
 from asgiref.sync import async_to_sync
@@ -23,6 +24,34 @@ from workers.celery import queue
 
 logger = logging.getLogger(__name__)
 
+async def get_expired_subscriptions(session: AsyncSession) -> Sequence[Subscription]:
+    current_date = datetime.now()
+
+    result = await session.execute(
+        select(Subscription).filter(
+            Subscription.end_date <= current_date,
+            Subscription.status == SubscriptionStatus.ACTIVE.value,
+        )
+    )
+    return result.scalars().all()
+
+
+async def check_subscription(subscription: Subscription, subscription_manager: SubscriptionManager):
+    if subscription.auto_renewal:
+        renew_data = SubscriptionRenew(plan_id=subscription.plan_id)
+        new_subscription = await subscription_manager.renew_subscription(
+            user_id=subscription.user_id, subscription_id=subscription.id, renew_data=renew_data
+        )
+        if hasattr(new_subscription, "id"):
+            logger.info(f"Subscription {subscription.id} is renewed")
+        await subscription_manager.mark_subscription_expired(
+            user_id=subscription.user_id, subscription_id=subscription.id, role_detachment=False
+        )
+    else:
+        await subscription_manager.mark_subscription_expired(
+            subscription.user_id, subscription.id, role_detachment=True
+        )
+
 
 async def main():
     try:
@@ -46,31 +75,11 @@ async def main():
                 subscription_service, payment_manager, auth_service, notification_service
             )
 
-            current_date = datetime.now()
-
-            result = await session.execute(
-                select(Subscription).filter(
-                    Subscription.end_date <= current_date,
-                    Subscription.status == SubscriptionStatus.ACTIVE.value,
-                )
-            )
-            expired_subscriptions = result.scalars().all()
+            expired_subscriptions = await get_expired_subscriptions(session)
 
             for subscription in expired_subscriptions:
-                if subscription.auto_renewal:
-                    renew_data = SubscriptionRenew(plan_id=subscription.plan_id)
-                    new_subscription = await subscription_manager.renew_subscription(
-                        user_id=subscription.user_id, subscription_id=subscription.id, renew_data=renew_data
-                    )
-                    if hasattr(new_subscription, "id"):
-                        logger.info(f"Subscription {subscription.id} is renewed")
-                    await subscription_manager.mark_subscription_expired(
-                        user_id=subscription.user_id, subscription_id=subscription.id, role_detachment=False
-                    )
-                else:
-                    await subscription_manager.mark_subscription_expired(
-                        subscription.user_id, subscription.id, role_detachment=True
-                    )
+                await check_subscription(subscription, subscription_manager)
+
     except Exception:
         logger.exception("An error occurred during subscription check process")
     finally:
