@@ -8,6 +8,8 @@ from core.config import settings
 from db.postgres import get_postgres_session, get_session
 from main import app
 from models.models import Base
+from services.subscription_manager import get_subscription_manager
+from tests.fixtures.subscription import override_get_subscription_manager
 
 pytest_plugins = [
     "fixtures.users",
@@ -38,6 +40,7 @@ async def override_get_postgres_session() -> async_sessionmaker[AsyncSession]:
 
 app.dependency_overrides[get_session] = override_get_session
 app.dependency_overrides[get_postgres_session] = override_get_postgres_session
+app.dependency_overrides[get_subscription_manager] = override_get_subscription_manager
 
 
 @pytest_asyncio.fixture(loop_scope="session", autouse=True)

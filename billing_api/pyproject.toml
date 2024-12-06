@@ -126,5 +126,9 @@ pythonpath = [".", "src"]
 filterwarnings = [
     "ignore:Please use `import python_multipart` instead",
     "ignore:Support for class-based `config` is deprecated, use ConfigDict instead",
+    "ignore::_pytest.warning_types.PytestAssertRewriteWarning",
+    "ignore::DeprecationWarning:.*stripe.*:",
+    "ignore:.*stripe.*:DeprecationWarning",
+    "ignore::DeprecationWarning:jose.jwt:"
 
 ]
