@@ -81,9 +81,9 @@ class SubscriptionManager:
     async def mark_subscription_expired(
         self, user_id: UUID, subscription_id: UUID, role_detachment: bool = True
     ) -> Subscription:
-        """Продляет подписку и инициирует оплату подписки дефолтной картой пользователя.
+        """Помечает подписку, как истекшую.
 
-        Под продлением понимается создание новой подписки.
+        Если role_detachment = True - отрываем роли у юзера и отправляем ему уведомление.
         """
         subscription = await self.get_subscription_by_id(subscription_id)
         await self._subscription_service.change_status(
