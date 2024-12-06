@@ -8,6 +8,7 @@ from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, subscription_query_params
 from schemas.admin import TransactionSchemaBaseResponse
 from schemas.subscription import SubscriptionCreate, SubscriptionRenew, SubscriptionResponse
+from schemas.transaction import TransactionSchemaBaseResponse
 from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
 router = APIRouter()
