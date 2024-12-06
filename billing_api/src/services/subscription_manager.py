@@ -1,134 +1,143 @@
-from datetime import datetime, timedelta
+import logging
+from collections.abc import Sequence
 from functools import lru_cache
 from uuid import UUID
 
 from aio_pika.abc import AbstractExchange
 from fastapi import Depends
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgres import get_session
 from db.rabbitmq import QueueName, get_rabbitmq_exchange
 from models.enums import SubscriptionStatus
-from models.models import Subscription
-from schemas.subscription import SubscriptionCreate, SubscriptionCreateFull, SubscriptionRenew, SubscriptionUpdate
-from services.base import SQLAlchemyRepository
-from services.exceptions import AccessDeniedError, ActiveSubscriptionExsistsError, SubscriptionCancelError
+from models.models import Subscription, Transaction
+from schemas.subscription import SubscriptionCreate, SubscriptionRenew
 from services.external import AuthService, NotificationService
+from services.payment_process import PaymentManager, get_payment_manager_service
+from services.subscription import SubscriptionService
 from services.subscription_plan import SubscriptionPlanService
 
+logger = logging.getLogger(__name__)
 
-class SubscriptionManager(SQLAlchemyRepository[Subscription, SubscriptionCreateFull, SubscriptionUpdate]):
-    # TODO: создание запроса на оплату подписки (payment intent)
-    # TODO: обработка ответа от платёжной системы (вебхука)
-    # TODO: изменение роли пользователя
-    # TODO: нотификации пользователю
+
+class SubscriptionManager:
     def __init__(
         self,
-        session: AsyncSession,
-        subscription_plan_service: SubscriptionPlanService,
+        subscription_service: SubscriptionService,
+        payment_manager: PaymentManager,
         auth_service: AuthService,
         notification_service: NotificationService,
     ):
-        super().__init__(model=Subscription, session=session)
-        self._subscription_plan_service = subscription_plan_service
+        self._subscription_service = subscription_service
+        self._payment_manager = payment_manager
         self._auth_service = auth_service
         self._notification_service = notification_service
 
     async def create_subscription(self, user_id: UUID, subscription_data: SubscriptionCreate) -> Subscription:
         """Создаёт новую подписку для пользователя."""
-        if await self._user_has_active_subscription(user_id):
-            raise ActiveSubscriptionExsistsError(f"Пользователь с id={user_id} уже имеет подписку.")
+        subscription = await self._subscription_service.create_subscription(user_id, subscription_data)
+        await self._notification_service.notify_user_subscription_status(user_id, SubscriptionStatus.PENDING)
+        return subscription
 
-        subscription_plan = await self._subscription_plan_service.get(subscription_data.plan_id)
-
-        start_date = datetime.now()
-        end_date = start_date + timedelta(days=subscription_plan.duration_days)
-
-        full_subscription_data = SubscriptionCreateFull(
-            user_id=user_id,
-            plan_id=subscription_data.plan_id,
-            start_date=start_date,
-            end_date=end_date,
-            status=SubscriptionStatus.PENDING,
-            auto_renewal=subscription_data.auto_renewal,
+    async def initate_subscription_payment(self, user_id: UUID, card_id: UUID, subscription_id: UUID) -> Transaction:
+        """Инициирует оплату по подписке."""
+        amount = await self._subscription_service.get_payment_amount(subscription_id)
+        transaction = await self._payment_manager.process_payment_with_card(
+            amount=amount, subscription_id=subscription_id, user_id=user_id, card_id=card_id
         )
-        return await self.create(full_subscription_data)
+        return transaction
+
+    async def activate_subscription(self, subscription_id: UUID) -> Subscription:
+        """Активирует подписку, изменяет роль пользователя и отправляет уведомление пользователю."""
+        subscription = await self._subscription_service.change_status(subscription_id, SubscriptionStatus.ACTIVE)
+        await self._auth_service.upgrade_user_to_subscriber(subscription.user_id)
+        await self._notification_service.notify_user_subscription_status(
+            subscription.user_id, SubscriptionStatus.ACTIVE
+        )
+        return subscription
 
     async def cancel_subscription(self, user_id: UUID, subscription_id: UUID) -> Subscription:
-        """Отменяет подписку пользователя."""
-        # TODO: проверка, возможно ли отменить подписку (можно отменить в течение N дней со старта?)
-        # TODO: возврат средств (платёжка)
-        subscription = await self._validate_subscription_access(user_id, subscription_id)
-
-        if subscription.status not in [SubscriptionStatus.ACTIVE, SubscriptionStatus.PENDING]:
-            raise SubscriptionCancelError("Ошибка при попытке отмены подписки. Проверьте статус подписки.")
-
-        update_data = SubscriptionUpdate(
-            status=SubscriptionStatus.CANCELLED, auto_renewal=False, end_date=datetime.now()
-        )
-        result = await self.update(subscription_id, update_data)
+        """Отменяет подписку пользователя, изменяет роль пользователя и отправляет уведомление пользователю."""
+        subscription = await self._subscription_service.cancel_subscription(user_id, subscription_id)
         await self._auth_service.downgrade_user_to_basic(user_id)
         await self._notification_service.notify_user_subscription_status(user_id, SubscriptionStatus.CANCELLED)
-        return result
-
-    async def toggle_auto_renewal(self, user_id: UUID, subscription_id: UUID) -> Subscription:
-        """Переключает режим автоматического продления подписки.
-
-        Если автоматическое продление включено - отключает его и наоборот.
-        """
-        subscription = await self._validate_subscription_access(user_id, subscription_id)
-        new_auto_renewal = not subscription.auto_renewal
-        update_data = SubscriptionUpdate(auto_renewal=new_auto_renewal)
-        return await self.update(subscription.id, update_data)
+        return subscription
 
     async def renew_subscription(
         self, user_id: UUID, subscription_id: UUID, renew_data: SubscriptionRenew
     ) -> Subscription:
-        """Продляет подписку.
+        """Продляет подписку и инициирует оплату подписки дефолтной картой пользователя.
 
-        Под продлением понимается смещение даты завершения подписки на количество дней, указанных в плане подписки.
+        Под продлением понимается создание новой подписки.
         """
-        # TODO: обработка платежа для продления подписки.
-        subscription_plan = await self._subscription_plan_service.get(renew_data.plan_id)
-        subscription = await self._validate_subscription_access(user_id, subscription_id)
-        new_end_date = subscription.end_date + timedelta(days=subscription_plan.duration_days)
-        update_data = SubscriptionUpdate(end_date=new_end_date)
-        return await self.update(subscription.id, update_data)
+        current_subscription = await self.get_user_subscription(user_id, subscription_id)
+        new_subscription = await self._subscription_service.renew_subscription(
+            user_id, current_subscription.id, renew_data
+        )
+        default_user_card = await self._payment_manager.get_user_default_card_id(user_id)
+        await self.initate_subscription_payment(user_id, card_id=default_user_card, subscription_id=new_subscription.id)
+        return new_subscription
+
+    async def get_subscription_by_id(self, subscription_id: UUID) -> Subscription:
+        """Получает подписку по id."""
+        return await self._subscription_service.get(subscription_id)
 
     async def get_user_subscription(self, user_id: UUID, subscription_id: UUID) -> Subscription:
-        return await self._validate_subscription_access(user_id, subscription_id)
+        """Получает подписку пользователя по id."""
+        return await self._subscription_service.get_user_subscription(user_id, subscription_id)
 
-    async def _user_has_active_subscription(self, user_id: UUID) -> bool:
-        """Проверяет наличие активной подписки у пользователя.
+    async def get_subscriptions(self, filters: dict | None) -> Sequence[Subscription]:
+        """Выгружает список подписок."""
+        return await self._subscription_service.get_many(filters)
 
-        Считаем, что подписка является активной в том случае, если подписка оплачена и активна (active),
-        либо находится в режиме ожидания оплаты (pending).
-        """
-        active_statuses = [SubscriptionStatus.ACTIVE, SubscriptionStatus.PENDING]
-        stmt = select(self._model).where(self._model.user_id == user_id, self._model.status.in_(active_statuses))
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none() is not None
+    async def toggle_subscription_auto_renewal(self, user_id: UUID, subscription_id: UUID) -> Subscription:
+        """Включает/отключает автоматическое продление подписки."""
+        return await self._subscription_service.toggle_auto_renewal(user_id, subscription_id)
 
-    async def _validate_subscription_access(self, user_id: UUID, subscription_id: UUID) -> Subscription:
-        """Проверяет, что подписка с указанным subscription_id существует и редактирование подписки доступно
-        пользователю с указанным user_id."""
-        subscription = await self.get(subscription_id)
-        if subscription.user_id != user_id:
-            raise AccessDeniedError("У вас недостаточно прав для совершения этого действия")
-        return subscription
+    async def handle_payment_webhook(self, event_type: str, payment_gateway_response: dict) -> None:
+        """Обрабатывает ответ от платёжной системы."""
+
+        handlers = {
+            "payment_intent.succeeded": self._handle_succefull_subscription_payment,
+            "payment_intent.payment_failed": self._handle_failed_subscription_payment,
+            "charge.refunded": self._handle_refund_subscription_payment,
+        }
+
+        handler = handlers.get(event_type)
+        if handler:
+            logger.info(f"Обработка события {event_type}")
+            await handler(payment_gateway_response)
+        else:
+            logger.warning(f"Не найден обработки для события типа {event_type}")
+
+    async def _handle_succefull_subscription_payment(self, payment_gateway_response: dict) -> None:
+        """Обработка события успешного платежа по подписке."""
+        transaction = await self._payment_manager.handle_payment_succeeded(payment_gateway_response)
+        await self.activate_subscription(transaction.subscription_id)
+
+    async def _handle_failed_subscription_payment(self, payment_gateway_response: dict) -> None:
+        """Обработка события неуспешного платеджа по подписке."""
+        await self._payment_manager.handle_payment_failed(payment_gateway_response)
+
+    async def _handle_refund_subscription_payment(self, payment_gateway_response: dict) -> None:
+        """Обработка события возврата платежа по подписке."""
+        transaction = await self._payment_manager.handle_payment_refunded(payment_gateway_response)
+        subscription = await self._subscription_service.get(transaction.subscription_id)
+        await self.cancel_subscription(user_id=subscription.user_id, subscription_id=subscription.id)
 
 
 @lru_cache
 def get_subscription_manager(
-    session: AsyncSession = Depends(get_session), exchange: AbstractExchange = Depends(get_rabbitmq_exchange)
+    session: AsyncSession = Depends(get_session),
+    exchange: AbstractExchange = Depends(get_rabbitmq_exchange),
+    payment_manager: PaymentManager = Depends(get_payment_manager_service),
 ):
-    subscription_plan_service = SubscriptionPlanService(session)
+    subscription_service = SubscriptionService(session, subscription_plan_service=SubscriptionPlanService(session))
     auth_service = AuthService(QueueName.AUTH, exchange)
     notification_service = NotificationService(QueueName.NOTIFICATION, exchange)
     return SubscriptionManager(
-        session=session,
-        subscription_plan_service=subscription_plan_service,
+        subscription_service=subscription_service,
+        payment_manager=payment_manager,
         auth_service=auth_service,
         notification_service=notification_service,
     )

@@ -11,3 +11,5 @@ venv
 .vscode/
 .ruff_cache/
 .mypy_cache/
+.env
+.pytest_cache/

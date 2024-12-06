@@ -25,7 +25,7 @@ async def get_subscription_by_id(
     subscription_id: UUID = Path(..., description="ID подписки"),
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
 ):
-    return await subscription_manager.get(subscription_id)
+    return await subscription_manager.get_subscription_by_id(subscription_id)
 
 
 @router.get(
@@ -40,7 +40,7 @@ async def get_subscriptions(
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
     query_params: dict[str, str] = Depends(subscription_query_params),
 ):
-    return paginate(await subscription_manager.get_many(query_params))
+    return paginate(await subscription_manager.get_subscriptions(query_params))
 
 
 @router.post(
