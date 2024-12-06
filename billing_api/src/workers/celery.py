@@ -1,6 +1,7 @@
-from celery import Celery, Task
-from core.config import settings
+from celery import Celery
 from kombu import Exchange, Queue
+
+from core.config import settings
 
 exchange = Exchange(name="celery", type="direct")
 queue = Queue(
