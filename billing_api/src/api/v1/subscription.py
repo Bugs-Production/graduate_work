@@ -6,6 +6,7 @@ from fastapi_pagination import Page, paginate
 
 from api.jwt_access_token import AccessTokenPayload, security_jwt
 from api.utils import generate_error_responses, subscription_query_params
+from schemas.admin import TransactionSchemaBaseResponse
 from schemas.subscription import SubscriptionCreate, SubscriptionRenew, SubscriptionResponse
 from services.subscription_manager import SubscriptionManager, get_subscription_manager
 
@@ -40,11 +41,11 @@ async def get_subscription_by_id(
 )
 async def get_subscriptions(
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
-    query_params: dict[str, str] = Depends(subscription_query_params),
+    query_params: dict[str, str | UUID] = Depends(subscription_query_params),
     token: AccessTokenPayload = Depends(security_jwt),
 ):
     query_params.update({"user_id": token.user_id})
-    return paginate(await subscription_manager.get_many(query_params))
+    return paginate(await subscription_manager.get_subscriptions(query_params))
 
 
 @router.post(
@@ -61,6 +62,23 @@ async def create_subscription(
     token: AccessTokenPayload = Depends(security_jwt),
 ):
     return await subscription_manager.create_subscription(token.user_id, subscription_data)
+
+
+@router.post(
+    "/{subscription_id}/pay",
+    response_model=TransactionSchemaBaseResponse,
+    summary="Оплатить подписку",
+    description="Создаёт запрос на оплату выбранной подписки пользователя",
+    status_code=HTTPStatus.OK,
+    responses=generate_error_responses(HTTPStatus.INTERNAL_SERVER_ERROR, HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND),  # type: ignore[reportArgumentType]
+)
+async def pay_for_subscription(
+    card_id: UUID,
+    subscription_id: UUID = Path(..., description="ID подписки"),
+    subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
+    token: AccessTokenPayload = Depends(security_jwt),
+):
+    return await subscription_manager.initate_subscription_payment(token.user_id, card_id, subscription_id)
 
 
 @router.post(
@@ -111,4 +129,6 @@ async def toggle_auto_renewal_subscription(
     subscription_manager: SubscriptionManager = Depends(get_subscription_manager),
     token: AccessTokenPayload = Depends(security_jwt),
 ):
-    return await subscription_manager.toggle_auto_renewal(user_id=token.user_id, subscription_id=subscription_id)
+    return await subscription_manager.toggle_subscription_auto_renewal(
+        user_id=token.user_id, subscription_id=subscription_id
+    )
