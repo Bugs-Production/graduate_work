@@ -125,6 +125,38 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  celery_beats:
+    build:
+      dockerfile: celery_beat.Dockerfile
+      context: ./billing_api
+    container_name: celery_beats
+    depends_on:
+      - rabbitmq
+      - billing_api
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/billing_api/src
+
+  celery_workers:
+    build:
+      dockerfile: celery.Dockerfile
+      context: ./billing_api
+    container_name: celery_workers
+    depends_on:
+      - rabbitmq
+      - billing_api
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - billing_network
+    volumes:
+      - ./billing_api/src:/billing_api/src
+
 networks:
   billing_network:
 
